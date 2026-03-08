@@ -1,4 +1,4 @@
-**Cursor PRD: AmanDate**
+**Cursor PRD: AmanDate**  
 **1. Project Overview**
 AmanDate is an internal, LAN-hosted networking and matchmaking application for organization members. Users can create profiles, view other members based on preferences, and swipe to express interest. When a mutual opt-in (match) occurs, the system generates a direct link to the organization's internal chat service (e.g., Slack) for seamless communication.
 
@@ -15,6 +15,7 @@ Out of scope for the MVP (but potential future work):
 - Advanced matching algorithms beyond simple mutual likes.
 
 **2. Tech Stack Definitions**
+
 - Frontend: React (Vite), TypeScript, Tailwind CSS. Target Node.js 20+ and modern evergreen browsers.
 - UI Library: shadcn/ui (for rapid, accessible, and clean component generation), Lucide React (icons), Framer Motion (for swipe animations).
 - Backend: FastAPI (Python), Pydantic (data validation), SQLAlchemy (ORM), Alembic (database migrations).
@@ -30,12 +31,10 @@ High level: a user authenticates via a trusted internal mechanism, creates or up
   - For the MVP, assume a simple LAN/SSO-backed auth layer or mock login; the app receives a stable internal user identifier and (optionally) a Slack user ID.
   - On first login, if no profile exists for the authenticated user, the system prompts them to create one.
   - Authentication implementation details (SSO provider, reverse proxy, etc.) are considered infrastructure concerns and are out of scope for this PRD.
-
 - **Onboarding & Profile Management**
   - User creates a profile with: name, bio, profile picture URL, department (optional), and `chat_id` (required for deep links).
   - User can later update profile fields (edit name, bio, photo_url, department). `chat_id` can be updated if their chat handle changes.
   - Soft deletion/deactivation may be supported via an `is_active` flag; deactivated users do not appear in discovery and cannot be swiped on.
-
 - **Discovery (The Stack)**
   - User sees a stack/list of candidate profiles filtered to:
     - Exclude themselves.
@@ -44,7 +43,6 @@ High level: a user authenticates via a trusted internal mechanism, creates or up
   - The API returns results in pages/batches (e.g., up to 20 profiles at a time).
   - Empty state: when no more candidates are available, the UI shows a friendly message (e.g., "You're all caught up") and may suggest checking back later.
   - Simple rate-limiting (e.g., max swipes per minute) can be enforced at the API or gateway level; exact limits can be tuned per deployment.
-
 - **Swiping & Matching**
   - For each candidate, the user can swipe right (Like) or left (Pass) via gesture or explicit buttons.
   - A swipe record is stored for every action.
@@ -52,13 +50,11 @@ High level: a user authenticates via a trusted internal mechanism, creates or up
     - If not, only the swipe is stored.
     - If yes, a Match is created for the pair if one does not already exist.
   - Matching logic must avoid duplicate matches for the same user pair.
-
 - **Match Resolution & Notifications**
   - When a new match is created as the result of a swipe, the API returns `matched: true` along with minimal details about the match and the other user, including their `chat_id` so the client can construct the deep link.
   - The frontend displays an "It's a Match!" modal with the chat deep link.
   - Users can view an aggregated list of all their matches at any time via the Matches view/sidebar.
   - No out-of-app notifications (email, push, etc.) are sent in the MVP.
-
 - **Error & Edge Cases**
   - User cannot swipe on themselves.
   - Users cannot swipe on profiles that are deactivated or missing a valid `chat_id`.
@@ -129,13 +125,11 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - `201 Created` with the created `User` object.
     - `400 Bad Request` for validation errors (e.g., missing `chat_id`).
     - `409 Conflict` if a profile already exists for the authenticated user or `chat_id` is not unique.
-
 - `GET /api/users/{user_id}`
   - **Description**: Fetch a single user profile by ID.
   - **Responses**:
     - `200 OK` with `User` object.
     - `404 Not Found` if the user does not exist.
-
 - `PUT /api/users/{user_id}`
   - **Description**: Update an existing user profile.
   - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_url`, `department`, `chat_id`.
@@ -144,13 +138,11 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - `400 Bad Request` for invalid fields.
     - `404 Not Found` if the user does not exist.
     - `409 Conflict` if updating `chat_id` violates uniqueness.
-
 - `POST /api/users/{user_id}/deactivate` (optional for MVP)
   - **Description**: Soft-deactivate a user (set `is_active = false`); deactivated users are hidden from discovery and cannot be swiped on.
   - **Responses**:
     - `200 OK` with updated `User` object.
     - `404 Not Found` if the user does not exist.
-
 - `GET /api/discovery/{user_id}`
   - **Description**: Fetch a list of candidate users the current user has not yet swiped on.
   - **Query params**:
@@ -163,7 +155,6 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
   - **Responses**:
     - `200 OK` with a list of lightweight user cards (id, name, department, photo_url).
     - `200 OK` with an empty list when there are no more candidates.
-
 - `POST /api/swipe`
   - **Description**: Record a swipe and optionally create a match.
   - **Request body** (Pydantic `SwipeRequest`):
@@ -178,7 +169,6 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
       - `matched: true` plus `match` object and minimal data about the other user (name, photo_url, `chat_id`) if a new or existing match is present.
     - `400 Bad Request` for invalid direction or invalid IDs.
     - `404 Not Found` if either user does not exist.
-
 - `GET /api/matches/{user_id}`
   - **Description**: Return all matches for a user.
   - **Behavior**:
@@ -195,7 +185,6 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
   - Layout: centered `Card` containing a form for `name`, `bio`, `photo_url`, `department`, and `chat_id`.
   - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for department), `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
-
 - **Swipe page (Discovery)**
   - Layout: main `Card` stack in the center with explicit Pass/Like buttons beneath; optional sidebar showing condensed matches list on desktop.
   - Components: `Card`, `CardContent`, `Button` (X / Heart icons via Lucide), Framer Motion for drag gestures (`drag`, `dragConstraints`, `dragElastic`, `onDragEnd`).
@@ -203,16 +192,13 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
     - Loading state: skeleton or spinner while fetching discovery candidates.
     - Empty state: illustration/text when there are no more profiles to swipe.
     - Error state: inline error with retry button and/or `Toast`.
-
 - **Matches page / sidebar**
   - Layout: list of matches with `Avatar`, name, department, and a primary "Open chat" action for each match.
   - Components: `Avatar`, `Button` or `Link`, list components.
   - Behavior: clicking "Open chat" opens the Slack (or configured chat) deep link in a new tab/window or external app.
-
 - **Match modal**
   - Components: `Dialog` / `Modal` triggered when `matched: true` is returned from the swipe API.
   - Content: both users' avatars and names, short confirmation copy, and a prominent "Message on Slack" button using the deep link.
-
 - **Global UI considerations**
   - Use `Toast` for subtle notifications (e.g., "Profile updated", "Error saving swipe").
   - Ensure layouts are mobile-first; on smaller screens, collapse sidebars into navigable views and make the swipe card full-width within safe margins.
@@ -268,18 +254,15 @@ Phase 6 (optional): Admin / debug tools
 - **Performance**
   - Designed for small to medium-sized organizations (tens to low hundreds of concurrent users on LAN).
   - Typical response times for core endpoints (`discovery`, `swipe`, `matches`) should be under 200–300 ms under normal load.
-
 - **Security & privacy**
   - Application is intended for internal LAN/VPN access only; no public internet exposure.
   - Store only minimal profile data necessary for matching and deep linking; do not store any chat content.
   - Log sensitive identifiers (like `chat_id`) sparingly and avoid logging raw request bodies in production.
   - Support basic role separation for any admin/debug views.
-
 - **Deployment**
   - Primary deployment target is Docker Compose on a single host (API + DB + reverse proxy if desired).
   - Configuration via environment variables: database URL, Slack team ID, base URL, allowed origins, feature flags (e.g., admin view, mock auth).
   - Provide sample `.env.example` for local development.
-
 - **Observability**
   - Basic structured logging for requests, errors, and key domain events (e.g., match creations).
   - Healthcheck endpoint for uptime monitoring.
@@ -294,3 +277,45 @@ Phase 6 (optional): Admin / debug tools
 - Support for multiple chat platforms beyond Slack (e.g., Microsoft Teams, Matrix).
 - Native mobile apps or a more polished mobile-first experience.
 - Push or email notifications and calendar integrations for follow-up reminders.
+
+**10. Frontend Design & UI/UX Direction**
+
+The MVP frontend should feel modern, polished, and calm. The visual style should use a subtle turquoise-forward palette that feels fresh and approachable without being overly saturated or harsh.
+
+- **Visual style goals**
+  - Clean, minimal surfaces with clear spacing and strong hierarchy.
+  - Soft depth (light shadows, subtle borders, gentle gradients) instead of heavy contrast.
+  - Rounded corners and smooth transitions for a contemporary "slick" feel.
+  - Avoid visual clutter; prioritize focus on profile cards and primary actions.
+- **Color direction (subtle turquoise theme)**
+  - Base background: very light cool neutrals (off-white with slight blue/teal tint).
+  - dPrimary accent: muted turquoise for primary CTAs, active states, and highlights.
+  - Secondary accent: deeper teal for hover/focus states and important emphasis.
+  - Text colors: high-contrast slate/charcoal for readability; avoid pure black where possible.
+  - Use color sparingly so the interface remains easy on the eyes in long sessions.
+- **Component-level guidance**
+  - Buttons: primary button uses turquoise accent; secondary buttons remain neutral with clear outlines.
+  - Cards: white or near-white cards with subtle border and soft shadow.
+  - Inputs: neutral field backgrounds with turquoise focus ring and clear invalid/error styling.
+  - Badges/labels: low-saturation turquoise or teal tints for metadata (e.g., department tags).
+  - Modal/dialog: slight backdrop blur and centered emphasis without dramatic effects.
+- **Motion and interaction**
+  - Use short, smooth transitions (150-250ms) for hover/focus/open states.
+  - Swipe interactions should feel responsive and fluid, with clear visual feedback on Like/Pass intent.
+  - Avoid excessive animations; motion should guide attention, not distract.
+- **Typography and spacing**
+  - Use a modern sans-serif stack with strong readability.
+  - Keep line lengths moderate; ensure generous padding and vertical rhythm.
+  - Emphasize content hierarchy: page title > section title > body/meta text.
+- **Accessibility and comfort**
+  - Maintain WCAG-friendly contrast for text and controls.
+  - Ensure visible keyboard focus states for all interactive elements.
+  - Do not rely only on color to communicate status (pair with labels/icons).
+  - Ensure responsive layouts and tap targets are comfortable on smaller screens.
+- **Implementation notes**
+  - Implement theme tokens via Tailwind/shadcn variables (e.g., primary, accent, muted) so palette tuning is centralized.
+  - Include dark mode in MVP with a user-accessible toggle and persisted preference (e.g., local storage).
+  - Dark mode should preserve the same calm turquoise identity with reduced saturation and sufficient contrast.
+  - Default theme may follow system preference on first visit, then prefer explicit user choice.
+  - Validate design consistency across Profile, Swipe, Matches, and Match Modal before Phase 5 completion.
+

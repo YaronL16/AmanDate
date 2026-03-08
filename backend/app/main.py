@@ -1,12 +1,23 @@
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .db import get_db
+from .config import get_settings
 from . import api_users, api_discovery, api_swipes
 
 
 app = FastAPI(title="AmanDate API")
+settings = get_settings()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health", tags=["health"])
