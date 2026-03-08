@@ -25,3 +25,19 @@ COPY backend /app
 
 EXPOSE 8000
 
+
+# Test image: same as runtime plus test deps; runs pytest alongside db
+FROM base AS test
+WORKDIR /app
+
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
+COPY backend/requirements-test.txt /tmp/requirements-test.txt
+RUN pip install --user --no-cache-dir -r /tmp/requirements-test.txt
+
+COPY backend /app
+ENV PYTHONPATH=/app
+
+CMD ["sh", "-c", "alembic upgrade head && pytest tests/ -v"]
+

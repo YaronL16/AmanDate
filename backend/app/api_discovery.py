@@ -2,6 +2,7 @@ from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .db import get_db
@@ -23,11 +24,7 @@ def get_discovery_candidates(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     # Users current user has already swiped on.
-    subquery = (
-        db.query(models.Swipe.swiped_id)
-        .filter(models.Swipe.swiper_id == user_id)
-        .subquery()
-    )
+    subquery = select(models.Swipe.swiped_id).filter(models.Swipe.swiper_id == user_id)
 
     candidates = (
         db.query(models.User)

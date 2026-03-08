@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   db:
     image: postgres:15
@@ -37,6 +35,19 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
+
+  tests:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: test
+    container_name: amandate_tests
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-amandate}:${POSTGRES_PASSWORD:-amandate}@db:5432/${POSTGRES_DB:-amandate}
+    working_dir: /app
 
 volumes:
   amandate-db-data:
