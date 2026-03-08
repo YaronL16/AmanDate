@@ -1,0 +1,32 @@
+# AmanDate Project Rules
+
+## Project Context
+You are building "AmanDate", an internal LAN networking and matching application (Tinder-style) for organizational use.
+
+## Tech Stack
+- **Backend:** Python 3.11+, FastAPI, SQLModel, PostgreSQL.
+- **Frontend:** React, Vite, TypeScript, Tailwind CSS, Shadcn UI.
+- **Deployment:** Dockerized for an on-premise Kubernetes cluster.
+
+## Architecture Guidelines
+
+- Maintain a strict monorepo structure with `/frontend` and `/backend` directories.
+- The frontend must never communicate directly with the database. All data fetching must go through the FastAPI backend.
+- Keep dependencies minimal. Do not add new libraries without explicit permission.
+
+## Backend Coding Standards (Python/FastAPI)
+- Enforce strict type hinting across all Python files.
+- Use SQLModel for both database schemas and Pydantic validation models.
+- Implement dependency injection for database sessions.
+- Handle all exceptions explicitly and return standard HTTP status codes.
+
+## Frontend Coding Standards (React/TypeScript)
+- Write strict TypeScript. No `any` types.
+- Use functional components and React Hooks.
+- Use Tailwind CSS for all styling. Rely on Shadcn UI for complex components.
+- Store API client calls in a dedicated `src/api` or `src/services` directory.
+
+## AI Assistant Directives
+- Write concise, modular code. Avoid massive files.
+- When generating UI components, prioritize clean, modern, and accessible design.
+- Always check the `PRD.md` to ensure the code aligns with the core requirements.
