@@ -234,6 +234,7 @@ Phase 4: Swipe UI
 - Implement the card deck UI using shadcn `Card` components and Framer Motion drag gestures.
 - Integrate the deck with `GET /api/discovery/{user_id}` and `POST /api/swipe`.
 - Handle loading, empty, and error states.
+- Populate the Database with a several users so the User can browse and view the feature in action
 - **Acceptance criteria**: A user can swipe through available profiles, and swipes are persisted and reflected in subsequent discovery results.
 
 Phase 5: Match resolution & matches view
