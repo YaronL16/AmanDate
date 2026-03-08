@@ -1,13 +1,267 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+
+import { ApiError } from '../lib/api/client'
+import { getDiscoveryCandidates } from '../lib/api/discovery'
+import { postSwipe } from '../lib/api/swipes'
+import type { SwipeDirection, UserCard } from '../lib/api/types'
+
+const CURRENT_USER_KEY = 'amandate.current_user_id'
+const PAGE_SIZE = 20
+const SWIPE_THRESHOLD = 120
+
+function getApiErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return 'Unexpected error. Please try again.'
+  }
+
+  if (error.status === 404) {
+    return 'Current user was not found. Please create your profile first.'
+  }
+
+  if (error.status === 400) {
+    return 'Swipe request is invalid for this profile.'
+  }
+
+  if (error.status === 422) {
+    return 'Invalid swipe data was sent. Please refresh and try again.'
+  }
+
+  return `Request failed (${error.status}). Please retry.`
+}
+
 export function SwipePage() {
+  const [userId, setUserId] = useState<string | null>(null)
+  const [cards, setCards] = useState<UserCard[]>([])
+  const [offset, setOffset] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [swipeFeedback, setSwipeFeedback] = useState<string | null>(null)
+  const [isSwiping, setIsSwiping] = useState(false)
+  const [hasExhausted, setHasExhausted] = useState(false)
+
+  const topCard = cards[0] ?? null
+  const nextCard = cards[1] ?? null
+  const hasUser = Boolean(userId)
+
+  const fetchCandidates = useCallback(
+    async (requestedOffset: number, reset: boolean) => {
+      if (!userId) return
+
+      try {
+        const result = await getDiscoveryCandidates(userId, PAGE_SIZE, requestedOffset)
+        setError(null)
+        setHasExhausted(result.length < PAGE_SIZE)
+        setOffset(requestedOffset + result.length)
+
+        setCards((prev) => (reset ? result : [...prev, ...result]))
+      } catch (fetchError) {
+        setError(getApiErrorMessage(fetchError))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [userId],
+  )
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem(CURRENT_USER_KEY)
+    setUserId(storedUserId)
+    if (!storedUserId) {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!userId) return
+    setLoading(true)
+    void fetchCandidates(0, true)
+  }, [userId, fetchCandidates])
+
+  const maybeBackfill = useCallback(async () => {
+    if (!userId || hasExhausted || cards.length > 3) {
+      return
+    }
+    await fetchCandidates(offset, false)
+  }, [cards.length, fetchCandidates, hasExhausted, offset, userId])
+
+  const submitSwipe = useCallback(
+    async (direction: SwipeDirection) => {
+      if (!userId || !topCard || isSwiping) {
+        return
+      }
+
+      setIsSwiping(true)
+      setError(null)
+      setSwipeFeedback(null)
+
+      try {
+        const result = await postSwipe({
+          swiper_id: userId,
+          swiped_id: topCard.id,
+          direction,
+        })
+
+        setCards((prev) => prev.slice(1))
+
+        if (result.matched && result.match) {
+          setSwipeFeedback(`Matched with ${result.match.other_user.name}!`)
+        }
+      } catch (swipeError) {
+        setError(getApiErrorMessage(swipeError))
+      } finally {
+        setIsSwiping(false)
+      }
+    },
+    [isSwiping, topCard, userId],
+  )
+
+  useEffect(() => {
+    void maybeBackfill()
+  }, [cards.length, maybeBackfill])
+
+  const onRetry = () => {
+    if (!userId) return
+    setLoading(true)
+    void fetchCandidates(0, true)
+  }
+
+  const cardCounterLabel = useMemo(() => {
+    if (loading) return 'Loading...'
+    if (!cards.length) return 'No candidates'
+    return `${cards.length} candidate${cards.length > 1 ? 's' : ''} in queue`
+  }, [cards.length, loading])
+
+  if (!hasUser) {
+    return (
+      <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
+        <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+        <p className="mt-3 text-sm text-[var(--text-secondary)]">
+          Create your profile first to start swiping.
+        </p>
+      </section>
+    )
+  }
+
   return (
     <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[var(--accent-primary)]" />
-        <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+      <div className="mb-5 flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">{cardCounterLabel}</p>
+        </div>
       </div>
-      <p className="mt-2 text-sm text-[var(--text-secondary)]">
-        Discovery card deck will be implemented in Phase 4.
-      </p>
+
+      {swipeFeedback && (
+        <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          {swipeFeedback}
+        </p>
+      )}
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-2 rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="h-[420px] rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-6">
+          <p className="text-sm text-[var(--text-secondary)]">Loading discovery candidates...</p>
+        </div>
+      ) : topCard ? (
+        <div>
+          <div className="relative mx-auto h-[420px] w-full max-w-md">
+            {nextCard && (
+              <div className="absolute inset-x-4 top-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-6 opacity-65">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                  Up next
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{nextCard.name}</h3>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                  {nextCard.department ?? 'No department provided'}
+                </p>
+              </div>
+            )}
+
+            <motion.div
+              className="absolute inset-0 cursor-grab rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-6 shadow-[0_16px_34px_rgba(16,49,54,0.18)] active:cursor-grabbing"
+              drag="x"
+              dragElastic={0.95}
+              dragConstraints={{ left: 0, right: 0 }}
+              onDragEnd={(_, info) => {
+                if (isSwiping) return
+                if (info.offset.x > SWIPE_THRESHOLD) {
+                  void submitSwipe('right')
+                } else if (info.offset.x < -SWIPE_THRESHOLD) {
+                  void submitSwipe('left')
+                }
+              }}
+              whileDrag={{ rotate: 6 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 24 }}
+            >
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
+                Candidate profile
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight">{topCard.name}</h3>
+              <p className="mt-2 text-sm text-[var(--text-secondary)]">
+                {topCard.department ?? 'No department provided'}
+              </p>
+
+              {topCard.photo_url ? (
+                <img
+                  src={topCard.photo_url}
+                  alt={`${topCard.name} profile`}
+                  className="mt-4 h-56 w-full rounded-xl border border-[var(--border-soft)] object-cover"
+                />
+              ) : (
+                <div className="mt-4 flex h-56 items-center justify-center rounded-xl border border-dashed border-[var(--border-soft)] bg-[var(--surface-panel-soft)] text-sm text-[var(--text-secondary)]">
+                  No photo available
+                </div>
+              )}
+            </motion.div>
+          </div>
+
+          <div className="mx-auto mt-5 flex w-full max-w-md items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void submitSwipe('left')}
+              disabled={isSwiping}
+              className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              Pass
+            </button>
+            <button
+              type="button"
+              onClick={() => void submitSwipe('right')}
+              disabled={isSwiping}
+              className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              Like
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-8 text-center">
+          <h3 className="text-lg font-semibold">You are all caught up</h3>
+          <p className="mt-2 text-sm text-[var(--text-secondary)]">
+            No more candidates right now. Check back later for new profiles.
+          </p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)]"
+          >
+            Refresh candidates
+          </button>
+        </div>
+      )}
     </section>
   )
 }
