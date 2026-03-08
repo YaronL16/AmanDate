@@ -30,3 +30,4 @@ You are building "AmanDate", an internal LAN networking and matching application
 - Write concise, modular code. Avoid massive files.
 - When generating UI components, prioritize clean, modern, and accessible design.
 - Always check the `PRD.md` to ensure the code aligns with the core requirements.
+- If adding a new feature not part of the PRD.md file, add it to the `PRD.md` file for future context
