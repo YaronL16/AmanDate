@@ -7,7 +7,7 @@ import { ApiError } from '../lib/api/client'
 import { getDiscoveryCandidates } from '../lib/api/discovery'
 import { postSwipe } from '../lib/api/swipes'
 import { createUser, findUserByChatId } from '../lib/api/users'
-import type { SwipeDirection, UserCard } from '../lib/api/types'
+import type { MatchOut, SwipeDirection, UserCard } from '../lib/api/types'
 
 const PAGE_SIZE = 20
 const SWIPE_THRESHOLD = 120
@@ -39,7 +39,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [swipeFeedback, setSwipeFeedback] = useState<string | null>(null)
+  const [activeMatch, setActiveMatch] = useState<MatchOut | null>(null)
   const [isSwiping, setIsSwiping] = useState(false)
   const [hasExhausted, setHasExhausted] = useState(false)
 
@@ -77,7 +77,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
 
     setLoading(true)
     setError(null)
-    setSwipeFeedback(null)
+    setActiveMatch(null)
 
     findUserByChatId(activeUser.chat_id)
       .then((user) => {
@@ -130,7 +130,6 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
 
       setIsSwiping(true)
       setError(null)
-      setSwipeFeedback(null)
 
       try {
         const result = await postSwipe({
@@ -142,7 +141,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
         setCards((prev) => prev.slice(1))
 
         if (result.matched && result.match) {
-          setSwipeFeedback(`Matched with ${result.match.other_user.name}!`)
+          setActiveMatch(result.match)
         }
       } catch (swipeError) {
         setError(getApiErrorMessage(swipeError))
@@ -205,12 +204,6 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{cardCounterLabel}</p>
         </div>
       </div>
-
-      {swipeFeedback && (
-        <p className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          {swipeFeedback}
-        </p>
-      )}
 
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
@@ -316,6 +309,49 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
           </button>
         </div>
       )}
+
+      {activeMatch ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-6 shadow-[0_24px_60px_rgba(16,49,54,0.28)]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
+              It&apos;s a Match!
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-tight">
+              You and {activeMatch.other_user.name} liked each other
+            </h3>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">
+              Start the conversation now using your configured chat app deep link.
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveMatch(null)}
+                className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)]"
+              >
+                Maybe later
+              </button>
+              {activeMatch.chat_thread_url ? (
+                <a
+                  href={activeMatch.chat_thread_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+                >
+                  Open chat
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setActiveMatch(null)}
+                  className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   )
 }

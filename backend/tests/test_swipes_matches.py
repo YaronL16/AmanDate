@@ -5,6 +5,8 @@ Phase 2: Tests for Swiping and Matching API.
 import pytest
 from fastapi.testclient import TestClient
 
+from app import api_swipes
+
 
 def test_swipe_left_200_not_matched(client: TestClient):
     a = client.post("/api/users", json={"name": "Alice", "chat_id": "U20"})
@@ -37,6 +39,7 @@ def test_swipe_right_no_reciprocal_200_not_matched(client: TestClient):
 
 
 def test_swipe_right_reciprocal_200_matched(client: TestClient):
+    api_swipes.settings.chat_deep_link_base_url = "https://chat.internal/users"
     a = client.post("/api/users", json={"name": "Alice", "chat_id": "U24", "photo_url": "https://a.jpg"})
     b = client.post("/api/users", json={"name": "Bob", "chat_id": "U25", "department": "Eng"})
     alice_id = a.json()["id"]
@@ -57,6 +60,7 @@ def test_swipe_right_reciprocal_200_matched(client: TestClient):
     assert data["match"]["other_user"]["name"] == "Bob"
     assert data["match"]["other_user"]["chat_id"] == "U25"
     assert data["match"]["other_user"]["department"] == "Eng"
+    assert data["match"]["chat_thread_url"] == "https://chat.internal/users/U25"
 
 
 def test_swipe_400_self_swipe(client: TestClient):
@@ -154,6 +158,7 @@ def test_matches_200_empty(client: TestClient):
 
 
 def test_matches_200_returns_list(client: TestClient):
+    api_swipes.settings.chat_deep_link_base_url = "https://chat.internal/users"
     a = client.post("/api/users", json={"name": "Alice", "chat_id": "U32"})
     b = client.post("/api/users", json={"name": "Bob", "chat_id": "U33", "department": "Eng"})
     alice_id = a.json()["id"]
@@ -169,5 +174,6 @@ def test_matches_200_returns_list(client: TestClient):
     assert data[0]["other_user"]["name"] == "Bob"
     assert data[0]["other_user"]["chat_id"] == "U33"
     assert data[0]["other_user"]["department"] == "Eng"
+    assert data[0]["chat_thread_url"] == "https://chat.internal/users/U33"
     assert "id" in data[0]
     assert "created_at" in data[0]

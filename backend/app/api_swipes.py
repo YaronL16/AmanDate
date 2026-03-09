@@ -6,9 +6,11 @@ from sqlalchemy.orm import Session
 
 from .db import get_db
 from . import models, schemas
+from .config import get_settings
 
 
 router = APIRouter(prefix="/api", tags=["swipes", "matches"])
+settings = get_settings()
 
 
 def _get_user_or_404(db: Session, user_id: UUID) -> models.User:
@@ -16,6 +18,12 @@ def _get_user_or_404(db: Session, user_id: UUID) -> models.User:
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     return user
+
+
+def _resolve_chat_link(match: models.Match, other_user: models.User) -> str | None:
+    if match.chat_thread_url:
+        return match.chat_thread_url
+    return settings.build_chat_deep_link(other_user.chat_id)
 
 
 @router.post("/swipe", response_model=schemas.SwipeResult)
@@ -104,7 +112,7 @@ def swipe(payload: schemas.SwipeRequest, db: Session = Depends(get_db)):
                 id=match_obj.id,
                 created_at=match_obj.created_at,
                 other_user=schemas.MatchUser.model_validate(other_user),
-                chat_thread_url=match_obj.chat_thread_url,
+                chat_thread_url=_resolve_chat_link(match_obj, other_user),
             ),
         )
 
@@ -138,7 +146,7 @@ def list_matches(user_id: UUID, db: Session = Depends(get_db)):
                 id=match.id,
                 created_at=match.created_at,
                 other_user=schemas.MatchUser.model_validate(other_user),
-                chat_thread_url=match.chat_thread_url,
+                chat_thread_url=_resolve_chat_link(match, other_user),
             )
         )
 

@@ -1,6 +1,7 @@
 from functools import lru_cache
 import os
 from typing import List
+from urllib.parse import quote
 
 
 class Settings:
@@ -15,6 +16,14 @@ class Settings:
         for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
         if origin.strip()
     ]
+    chat_deep_link_base_url: str = os.getenv("CHAT_DEEP_LINK_BASE_URL", "").strip()
+
+    def build_chat_deep_link(self, chat_id: str | None) -> str | None:
+        if not chat_id or not self.chat_deep_link_base_url:
+            return None
+        base_url = self.chat_deep_link_base_url.rstrip("/")
+        encoded_chat_id = quote(chat_id, safe="")
+        return f"{base_url}/{encoded_chat_id}"
 
 
 @lru_cache(maxsize=1)
