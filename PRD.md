@@ -192,7 +192,7 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
   - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for department), `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
   - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.
-- **Swipe page (Discovery)**
+- **Home page (Swipe Discovery)**
   - Layout: main `Card` stack in the center with explicit Pass/Like buttons beneath; optional sidebar showing condensed matches list on desktop.
   - Components: `Card`, `CardContent`, `Button` (X / Heart icons via Lucide), Framer Motion for drag gestures (`drag`, `dragConstraints`, `dragElastic`, `onDragEnd`).
   - States:
@@ -231,7 +231,7 @@ Phase 2: Core API logic
 Phase 3: Frontend scaffolding & API integration
 
 - Initialize Vite React app and install Tailwind CSS + shadcn/ui.
-- Set up routing (e.g., `react-router`) for Profile, Swipe, and Matches views.
+- Set up routing (e.g., `react-router`) for Home (Swipe), Profile, and Matches views.
 - Implement an API client layer (e.g., using `fetch` or Axios) with typed response models.
 - Add MVP mock auth flow with a predefined user dataset, login by `user_id`, and logout.
 - Build the user profile form and wire it to the `/api/users` endpoints, with read-only identity fields (`name`, `department`, `chat_id`) and editable non-identity fields (`bio`, `photo_url`).
@@ -326,5 +326,5 @@ The MVP frontend should feel modern, polished, and calm. The visual style should
   - Include dark mode in MVP with a user-accessible toggle and persisted preference (e.g., local storage).
   - Dark mode should preserve the same calm turquoise identity with reduced saturation and sufficient contrast.
   - Default theme may follow system preference on first visit, then prefer explicit user choice.
-  - Validate design consistency across Profile, Swipe, Matches, and Match Modal before Phase 5 completion.
+  - Validate design consistency across Home (Swipe), Profile, Matches, and Match Modal before Phase 5 completion.
 
