@@ -6,21 +6,22 @@ MUSIC_GENRES = [
     "Electronic",
     "Mizrahi",
     "Mediterranean",
-    "Indie",
     "Jazz",
     "Classical",
     "Reggae",
     "Country",
     "Metal",
-    "Folk",
 ]
 
 ISRAEL_REGIONS = [
-    "North",
-    "Haifa",
-    "Center",
-    "Tel Aviv",
-    "Jerusalem",
-    "South",
+    "Golan Heights",
+    "The Galilee",
+    "Haifa Area",
+    "The Sharon",
+    "Gush Dan",
     "Judea and Samaria",
+    "HaShfela",
+    "Otef Aza"
+    "The Negev",
+    "Eilat Area",
 ]
