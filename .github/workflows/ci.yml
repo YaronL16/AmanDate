@@ -190,23 +190,15 @@ jobs:
     - version
     - create-git-tag
     steps:
-    - name: Create release
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        VERSION: ${{ needs.version.outputs.value }}
-      run: |
-        if gh release view "$VERSION" >/dev/null 2>&1; then
-          echo "Release $VERSION already exists, skipping."
-          exit 0
-        fi
-
-        NOTES=$(cat <<EOF
-        ## Container images
-        - Backend: ${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/amandate-backend:$VERSION
-        - Frontend: ${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/amandate-frontend:$VERSION
-        EOF
-        )
-        gh release create "$VERSION" \
-          --title "Release $VERSION" \
-          --generate-notes \
-          --notes "$NOTES"
+    - name: Create or update release
+      uses: ncipollo/release-action@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{ needs.version.outputs.value }}
+        name: Release ${{ needs.version.outputs.value }}
+        allowUpdates: true
+        generateReleaseNotes: true
+        body: |
+          ## Container images
+          - Backend: ${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/amandate-backend:${{ needs.version.outputs.value }}
+          - Frontend: ${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/amandate-frontend:${{ needs.version.outputs.value }}
