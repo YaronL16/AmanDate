@@ -36,6 +36,7 @@ def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         photo_url=payload.photo_url,
         department=payload.department,
         chat_id=payload.chat_id,
+        gender=payload.gender,
         is_active=payload.is_active if payload.is_active is not None else True,
     )
     db.add(user)

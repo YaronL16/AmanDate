@@ -2,6 +2,7 @@ export interface MockAuthUser {
   user_id: string
   name: string
   department: string
+  gender: 'male' | 'female'
   chat_id: string
 }
 
@@ -10,30 +11,35 @@ export const MOCK_AUTH_USERS: MockAuthUser[] = [
     user_id: 'u-avi',
     name: 'Avi Cohen',
     department: 'Engineering',
+    gender: 'male',
     chat_id: 'UDEMO001',
   },
   {
     user_id: 'u-noa',
     name: 'Noa Levi',
     department: 'Product',
+    gender: 'female',
     chat_id: 'UDEMO002',
   },
   {
     user_id: 'u-yuval',
     name: 'Yuval Katz',
     department: 'Design',
+    gender: 'male',
     chat_id: 'UDEMO003',
   },
   {
     user_id: 'u-maya',
     name: 'Maya Azulay',
     department: 'Marketing',
+    gender: 'female',
     chat_id: 'UDEMO004',
   },
   {
     user_id: 'u-daniel',
     name: 'Daniel Mor',
     department: 'Finance',
+    gender: 'male',
     chat_id: 'UDEMO005',
   },
 ]

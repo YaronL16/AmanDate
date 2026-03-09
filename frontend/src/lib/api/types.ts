@@ -4,6 +4,7 @@ export interface UserOut {
   bio: string | null
   photo_url: string | null
   department: string | null
+  gender: 'male' | 'female' | null
   chat_id: string
   is_active: boolean
   created_at: string
@@ -13,6 +14,7 @@ export interface UserCard {
   id: string
   name: string
   department: string | null
+  gender: 'male' | 'female' | null
   photo_url: string | null
 }
 
@@ -21,6 +23,7 @@ export interface UserCreatePayload {
   bio?: string | null
   photo_url?: string | null
   department?: string | null
+  gender?: 'male' | 'female' | null
   chat_id: string
   is_active?: boolean
 }
@@ -30,6 +33,7 @@ export interface UserUpdatePayload {
   bio?: string | null
   photo_url?: string | null
   department?: string | null
+  gender?: 'male' | 'female' | null
   chat_id?: string
   is_active?: boolean
 }

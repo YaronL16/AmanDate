@@ -27,6 +27,7 @@ class User(Base):
     photo_url = Column(String, nullable=True)
     chat_id = Column(String, nullable=False, unique=True)
     department = Column(String, nullable=True)
+    gender = Column(Enum("male", "female", name="user_gender"), nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     last_active_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

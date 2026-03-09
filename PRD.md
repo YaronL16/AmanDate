@@ -28,12 +28,12 @@ Out of scope for the MVP (but potential future work):
 High level: a user authenticates via a trusted internal mechanism, creates or updates their profile, discovers other active members, swipes on them, and receives matches with deep links to the chat platform.
 
 - **Authentication & Session**
-  - In on-prem production, users authenticate via the organization's IDP/SSO layer, and trusted identity attributes are injected into the app context (`user_id`, `name`, `department`, `chat_id` / Slack link).
+  - In on-prem production, users authenticate via the organization's IDP/SSO layer, and trusted identity attributes are injected into the app context (`user_id`, `name`, `department`, `gender`, `chat_id` / Slack link).
   - In MVP testing mode, use a frontend-only mock login: choose/enter `user_id` from a predefined dataset in code and create a local test session.
   - Include explicit logout in MVP so testers can switch users quickly.
   - Authentication implementation details (SSO provider, reverse proxy, etc.) remain infrastructure concerns and are out of scope for this PRD.
 - **Onboarding & Profile Management**
-  - User identity fields (`name`, `department`, `chat_id`) come from IDP in production, and from the MVP dataset in testing mode.
+  - User identity fields (`name`, `department`, `gender`, `chat_id`) come from IDP in production, and from the MVP dataset in testing mode.
   - In MVP, profile editing is limited to non-identity fields (`bio`, `photo_url`); identity fields are shown as read-only.
   - Users must explicitly enable their account from profile before they can swipe or appear in discovery.
   - Enablement is controlled by `is_active` and must require both a checkbox and user confirmation in profile UX.
@@ -76,6 +76,7 @@ users table:
 - photo_url (String)
 - chat_id (String - e.g., Slack user ID, required for the deep link, **unique**)
 - department (String, optional)
+- gender (Enum/String, one of `male` or `female`; immutable identity field sourced from IDP/dataset in MVP)
 - is_active (Boolean, default `true`; controls whether the user appears in discovery and can be swiped on)
 - last_active_at (Timestamp, nullable; updated when the user interacts with the app)
 - created_at (Timestamp, default to current timestamp)
@@ -124,7 +125,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
 - `POST /api/users`
   - **Description**: Create a new user profile.
   - **Request body** (Pydantic `UserCreate`):
-    - `name`, `bio`, `photo_url`, `department` (optional), `chat_id` (required).
+    - `name`, `bio`, `photo_url`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
   - **Responses**:
     - `201 Created` with the created `User` object.
     - `400 Bad Request` for validation errors (e.g., missing `chat_id`).
@@ -136,7 +137,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - `404 Not Found` if the user does not exist.
 - `PUT /api/users/{user_id}`
   - **Description**: Update an existing user profile.
-  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_url`, `department`, `chat_id`.
+  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_url`, `department`, `gender`, `chat_id`.
   - **Responses**:
     - `200 OK` with updated `User` object.
     - `400 Bad Request` for invalid fields.
@@ -187,7 +188,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
 Cursor should utilize the `npx shadcn-ui@latest add [component]` command to generate base components, then compose them into pages and layouts.
 
 - **Onboarding / Profile page**
-  - Layout: centered `Card` containing a form for `name`, `bio`, `photo_url`, `department`, and `chat_id`.
+  - Layout: centered `Card` containing a form for identity fields (`name`, `department`, `gender`, `chat_id`) plus editable profile fields.
   - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for department), `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
   - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.

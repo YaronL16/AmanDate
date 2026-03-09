@@ -85,6 +85,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
           return createUser({
             name: activeUser.name,
             department: activeUser.department,
+            gender: activeUser.gender,
             chat_id: activeUser.chat_id,
             bio: null,
             photo_url: null,
@@ -184,7 +185,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
       <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
         <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
         <p className="mt-3 text-sm text-[var(--text-secondary)]">
-          Your account is not enabled yet. Enable it in profile to start swiping and appear in discovery.
+          Your account is not activated yet. Activate it in profile to start swiping and appear in discovery.
         </p>
         <Link
           to="/profile"

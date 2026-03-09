@@ -24,6 +24,7 @@ function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePay
     bio: form.bio.trim() || null,
     photo_url: form.photo_url.trim() || null,
     department: identity.department,
+    gender: identity.gender,
     chat_id: identity.chat_id,
     is_active: form.is_active,
   }
@@ -65,6 +66,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const firstName = activeUser?.name.trim().split(/\s+/)[0] ?? ''
 
   useEffect(() => {
     if (!activeUser) {
@@ -121,7 +123,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     const enablingNow = !persistedIsActive && form.is_active
     if (enablingNow) {
       const confirmed = window.confirm(
-        'Enable account now? Once enabled, you will be visible in discovery and can swipe.',
+        'Activate account now? Once activated, you will be visible in discovery and can swipe.',
       )
       if (!confirmed) {
         return
@@ -173,14 +175,23 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     <section className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Profile</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Profile - {firstName}</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             {backendUserId ? 'Editing saved profile' : 'New profile setup'}
           </p>
         </div>
-        <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-primary-strong)]">
-          Identity from test dataset
-        </span>
+        <div className="flex flex-col items-end gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${persistedIsActive
+              ? 'bg-emerald-100 text-emerald-700'
+              : 'bg-amber-100 text-amber-800'}`}
+          >
+            {persistedIsActive ? 'Activated' : 'Not activated'}
+          </span>
+          <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-primary-strong)]">
+            Identity from test dataset
+          </span>
+        </div>
       </div>
 
       <p className="mb-6 text-sm text-[var(--text-secondary)]">
@@ -197,7 +208,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
             disabled={saving}
           />
           <span className="text-sm text-[var(--text-primary)]">
-            Enable my account so I can swipe and appear in discovery.
+            Activate my account so I can swipe and appear in discovery.
           </span>
         </label>
       </div>
@@ -242,6 +253,15 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
         </label>
 
         <label className="block">
+          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Gender</span>
+          <input
+            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+            value={activeUser.gender}
+            disabled
+          />
+        </label>
+
+        <label className="block">
           <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Photo URL</span>
           <input
             className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
@@ -264,7 +284,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
           className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
           disabled={saving}
         >
-          {saving ? 'Saving...' : backendUserId ? 'Update profile' : 'Create profile'}
+          {saving ? 'Saving...' : 'Save profile'}
         </button>
       </form>
     </section>

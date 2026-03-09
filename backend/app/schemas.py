@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -11,6 +11,7 @@ class UserBase(BaseModel):
     photo_url: Optional[str] = None
     department: Optional[str] = None
     chat_id: str = Field(..., min_length=1)
+    gender: Optional[Literal["male", "female"]] = None
 
 
 class UserCreate(UserBase):
@@ -23,6 +24,7 @@ class UserUpdate(BaseModel):
     photo_url: Optional[str] = None
     department: Optional[str] = None
     chat_id: Optional[str] = Field(None, min_length=1)
+    gender: Optional[Literal["male", "female"]] = None
     is_active: Optional[bool] = None
 
 
@@ -33,6 +35,7 @@ class UserOut(BaseModel):
     photo_url: Optional[str]
     department: Optional[str]
     chat_id: str
+    gender: Optional[Literal["male", "female"]]
     is_active: bool
     created_at: datetime
 
@@ -44,6 +47,7 @@ class UserCard(BaseModel):
     name: str
     department: Optional[str]
     photo_url: Optional[str]
+    gender: Optional[Literal["male", "female"]]
 
     model_config = ConfigDict(from_attributes=True)
 
