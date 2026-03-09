@@ -1,9 +1,10 @@
+# syntax=docker/dockerfile:1.7
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY frontend/ ./
 ARG VITE_API_BASE_URL=http://localhost:8000

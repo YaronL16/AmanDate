@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7
 FROM python:3.11-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -13,7 +14,7 @@ WORKDIR /app
 # Install Python dependencies in a separate layer so this step
 # is only re-run when requirements.txt changes.
 COPY backend/requirements.txt /tmp/requirements.txt
-RUN pip install --user --no-cache-dir -r /tmp/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install --user -r /tmp/requirements.txt
 
 FROM base AS runtime
 WORKDIR /app
@@ -36,7 +37,7 @@ COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
 COPY backend/requirements-test.txt /tmp/requirements-test.txt
-RUN pip install --user --no-cache-dir -r /tmp/requirements-test.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip install --user -r /tmp/requirements-test.txt
 
 COPY backend /app
 ENV PYTHONPATH=/app
