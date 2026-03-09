@@ -43,14 +43,14 @@ def test_create_user_201_with_profile_fields(client: TestClient):
         "chat_id": "U_PROFILE_1",
         "age": 29,
         "favorite_genres": ["Pop", "Rock", "Jazz"],
-        "region": "Center",
+        "region": "Gush Dan",
     }
     r = client.post("/api/users", json=payload)
     assert r.status_code == 201
     data = r.json()
     assert data["age"] == 29
     assert data["favorite_genres"] == ["Pop", "Rock", "Jazz"]
-    assert data["region"] == "Center"
+    assert data["region"] == "Gush Dan"
 
 
 def test_create_user_422_invalid_age(client: TestClient):
@@ -153,15 +153,15 @@ def test_update_user_200_with_profile_fields(client: TestClient):
         f"/api/users/{user_id}",
         json={
             "age": 35,
-            "favorite_genres": ["Electronic", "Indie"],
-            "region": "Tel Aviv",
+            "favorite_genres": ["Electronic", "Rock"],
+            "region": "The Sharon",
         },
     )
     assert r.status_code == 200
     data = r.json()
     assert data["age"] == 35
-    assert data["favorite_genres"] == ["Electronic", "Indie"]
-    assert data["region"] == "Tel Aviv"
+    assert data["favorite_genres"] == ["Electronic", "Rock"]
+    assert data["region"] == "The Sharon"
 
 
 def test_update_user_404(client: TestClient):
