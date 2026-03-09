@@ -8,9 +8,16 @@ export interface MockAuthUser {
 
 export const MOCK_AUTH_USERS: MockAuthUser[] = [
   {
-    user_id: 'u-avi',
-    name: 'Avi Cohen',
-    department: 'Engineering',
+    user_id: 'yaron',
+    name: 'Yaron Lavi',
+    department: 'Architecture',
+    gender: 'male',
+    chat_id: 'UDEMO001',
+  },
+  {
+    user_id: 'yud-idan',
+    name: 'Yonatan Idan',
+    department: 'Data',
     gender: 'male',
     chat_id: 'UDEMO001',
   },
