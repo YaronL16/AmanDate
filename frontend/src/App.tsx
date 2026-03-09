@@ -22,6 +22,7 @@ function App() {
   const adminViewEnabled = ['1', 'true', 'yes', 'on'].includes(
     (import.meta.env.VITE_ENABLE_ADMIN_VIEW ?? '').toLowerCase(),
   )
+  const configuredAdminUserId = (import.meta.env.VITE_ADMIN_USER_ID ?? '').trim()
   const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
   const [sessionUserId, setSessionUserIdState] = useState<string | null>(getSessionUserId)
   const [pendingUserId, setPendingUserId] = useState<string>(() => getSessionUserId() ?? MOCK_AUTH_USERS[0]?.user_id ?? '')
@@ -47,6 +48,10 @@ function App() {
   }
 
   const activeMockUser = getMockUserById(sessionUserId)
+  const showAdminNav =
+    adminViewEnabled &&
+    Boolean(configuredAdminUserId) &&
+    activeMockUser?.user_id === configuredAdminUserId
 
   return (
     <div className="min-h-screen text-[var(--text-primary)]">
@@ -85,7 +90,7 @@ function App() {
           >
             Matches
           </NavLink>
-          {adminViewEnabled ? (
+          {showAdminNav ? (
             <NavLink
               className={({ isActive }) =>
                 `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${isActive

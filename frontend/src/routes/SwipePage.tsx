@@ -12,6 +12,12 @@ import type { MatchOut, SwipeDirection, UserCard } from '../lib/api/types'
 const PAGE_SIZE = 20
 const SWIPE_THRESHOLD = 120
 
+function getFirstName(fullName: string): string {
+  const trimmed = fullName.trim()
+  if (!trimmed) return fullName
+  return trimmed.split(/\s+/)[0] ?? fullName
+}
+
 function getApiErrorMessage(error: unknown): string {
   if (!(error instanceof ApiError)) {
     return 'Unexpected error. Please try again.'
@@ -230,7 +236,9 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                   Up next
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{nextCard.name}</h3>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
+                  {getFirstName(nextCard.name)}
+                </h3>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
                   {nextCard.department ?? 'No department provided'}
                 </p>
@@ -256,7 +264,9 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                 Candidate profile
               </p>
-              <h3 className="mt-2 text-2xl font-semibold tracking-tight">{topCard.name}</h3>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight">
+                {getFirstName(topCard.name)}
+              </h3>
               <p className="mt-2 text-sm text-[var(--text-secondary)]">
                 {topCard.department ?? 'No department provided'}
               </p>
