@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .db import get_db
 from . import models, schemas
+from .profile_options import ISRAEL_REGIONS, MUSIC_GENRES
 
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -37,6 +38,9 @@ def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         department=payload.department,
         chat_id=payload.chat_id,
         gender=payload.gender,
+        age=payload.age,
+        favorite_genres=payload.favorite_genres,
+        region=payload.region,
         is_active=payload.is_active if payload.is_active is not None else True,
     )
     db.add(user)
@@ -50,6 +54,14 @@ def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         )
     db.refresh(user)
     return user
+
+
+@router.get("/options", response_model=schemas.ProfileOptionsOut)
+def get_profile_options():
+    return schemas.ProfileOptionsOut(
+        music_genres=MUSIC_GENRES,
+        israel_regions=ISRAEL_REGIONS,
+    )
 
 
 @router.get("/{user_id}", response_model=schemas.UserOut)

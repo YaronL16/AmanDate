@@ -27,6 +27,68 @@ def test_create_user_201(client: TestClient):
     assert "created_at" in data
 
 
+def test_get_profile_options_200(client: TestClient):
+    r = client.get("/api/users/options")
+    assert r.status_code == 200
+    data = r.json()
+    assert "music_genres" in data
+    assert "israel_regions" in data
+    assert len(data["music_genres"]) > 0
+    assert len(data["israel_regions"]) > 0
+
+
+def test_create_user_201_with_profile_fields(client: TestClient):
+    payload = {
+        "name": "Profile User",
+        "chat_id": "U_PROFILE_1",
+        "age": 29,
+        "favorite_genres": ["Pop", "Rock", "Jazz"],
+        "region": "Center",
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 201
+    data = r.json()
+    assert data["age"] == 29
+    assert data["favorite_genres"] == ["Pop", "Rock", "Jazz"]
+    assert data["region"] == "Center"
+
+
+def test_create_user_422_invalid_age(client: TestClient):
+    payload = {"name": "Too Young", "chat_id": "U_PROFILE_2", "age": 17}
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_more_than_3_genres(client: TestClient):
+    payload = {
+        "name": "Genre Overflow",
+        "chat_id": "U_PROFILE_3",
+        "favorite_genres": ["Pop", "Rock", "Jazz", "Metal"],
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_invalid_genre(client: TestClient):
+    payload = {
+        "name": "Invalid Genre",
+        "chat_id": "U_PROFILE_4",
+        "favorite_genres": ["Pop", "Opera"],
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_invalid_region(client: TestClient):
+    payload = {
+        "name": "Invalid Region",
+        "chat_id": "U_PROFILE_5",
+        "region": "Atlantis",
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
 def test_create_user_400_missing_chat_id(client: TestClient):
     payload = {"name": "Bob", "bio": "No chat_id"}
     r = client.post("/api/users", json=payload)
@@ -81,6 +143,25 @@ def test_update_user_200(client: TestClient):
     assert r.json()["name"] == "Dave Updated"
     assert r.json()["bio"] == "New bio"
     assert r.json()["chat_id"] == "U003"
+
+
+def test_update_user_200_with_profile_fields(client: TestClient):
+    create_r = client.post("/api/users", json={"name": "Updater", "chat_id": "U_PROFILE_6"})
+    user_id = create_r.json()["id"]
+
+    r = client.put(
+        f"/api/users/{user_id}",
+        json={
+            "age": 35,
+            "favorite_genres": ["Electronic", "Indie"],
+            "region": "Tel Aviv",
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["age"] == 35
+    assert data["favorite_genres"] == ["Electronic", "Indie"]
+    assert data["region"] == "Tel Aviv"
 
 
 def test_update_user_404(client: TestClient):

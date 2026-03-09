@@ -34,7 +34,7 @@ High level: a user authenticates via a trusted internal mechanism, creates or up
   - Authentication implementation details (SSO provider, reverse proxy, etc.) remain infrastructure concerns and are out of scope for this PRD.
 - **Onboarding & Profile Management**
   - User identity fields (`name`, `department`, `gender`, `chat_id`) come from IDP in production, and from the MVP dataset in testing mode.
-  - In MVP, profile editing is limited to non-identity fields (`bio`, `photo_url`); identity fields are shown as read-only.
+- In MVP, profile editing is limited to non-identity fields (`bio`, `photo_url`, `age`, `favorite_genres`, `region`); identity fields are shown as read-only.
   - Users must explicitly enable their account from profile before they can swipe or appear in discovery.
   - Enablement is controlled by `is_active` and must require both a checkbox and user confirmation in profile UX.
   - When not enabled (`is_active = false`), the user cannot swipe and is hidden from discovery.
@@ -74,6 +74,9 @@ users table:
 - name (String, required)
 - bio (Text)
 - photo_url (String)
+- age (Integer, nullable, expected range 18-120)
+- favorite_genres (Array/JSON of String, nullable, max 3 entries)
+- region (String, nullable, one value from the maintained Israel regions list)
 - chat_id (String - e.g., Slack user ID, required for the deep link, **unique**)
 - department (String, optional)
 - gender (Enum/String, one of `male` or `female`; immutable identity field sourced from IDP/dataset in MVP)
@@ -125,7 +128,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
 - `POST /api/users`
   - **Description**: Create a new user profile.
   - **Request body** (Pydantic `UserCreate`):
-    - `name`, `bio`, `photo_url`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
+    - `name`, `bio`, `photo_url`, `age`, `favorite_genres`, `region`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
   - **Responses**:
     - `201 Created` with the created `User` object.
     - `400 Bad Request` for validation errors (e.g., missing `chat_id`).
@@ -137,7 +140,11 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - `404 Not Found` if the user does not exist.
 - `PUT /api/users/{user_id}`
   - **Description**: Update an existing user profile.
-  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_url`, `department`, `gender`, `chat_id`.
+  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_url`, `age`, `favorite_genres`, `region`, `department`, `gender`, `chat_id`.
+- `GET /api/users/options`
+  - **Description**: Return backend-maintained choice lists for profile fields.
+  - **Responses**:
+    - `200 OK` with `music_genres` and `israel_regions`.
   - **Responses**:
     - `200 OK` with updated `User` object.
     - `400 Bad Request` for invalid fields.
@@ -189,7 +196,7 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
 
 - **Onboarding / Profile page**
   - Layout: centered `Card` containing a form for identity fields (`name`, `department`, `gender`, `chat_id`) plus editable profile fields.
-  - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for department), `Button`, `Avatar` preview.
+  - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for `region`), checkbox group/multi-select (for `favorite_genres`), `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
   - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.
 - **Home page (Swipe Discovery)**
@@ -234,7 +241,7 @@ Phase 3: Frontend scaffolding & API integration
 - Set up routing (e.g., `react-router`) for Home (Swipe), Profile, and Matches views.
 - Implement an API client layer (e.g., using `fetch` or Axios) with typed response models.
 - Add MVP mock auth flow with a predefined user dataset, login by `user_id`, and logout.
-- Build the user profile form and wire it to the `/api/users` endpoints, with read-only identity fields (`name`, `department`, `chat_id`) and editable non-identity fields (`bio`, `photo_url`).
+- Build the user profile form and wire it to the`/api/users` endpoints, with read-only identity fields (`name`, `department`, `chat_id`) and editable non-identity fields (`bio`, `photo_url`).
 - **Acceptance criteria**: A tester can login/logout by `user_id`, load the app as that user, update allowed profile fields via the UI, and see persisted changes after refresh.
 
 Phase 4: Swipe UI

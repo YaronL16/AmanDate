@@ -3,18 +3,24 @@ import type { FormEvent } from 'react'
 
 import type { MockAuthUser } from '../mocks/users'
 import { ApiError } from '../lib/api/client'
-import { createUser, findUserByChatId, updateUser } from '../lib/api/users'
+import { createUser, findUserByChatId, getProfileOptions, updateUser } from '../lib/api/users'
 import type { ApiValidationError, UserCreatePayload, UserOut } from '../lib/api/types'
 
 type FormState = {
   bio: string
   photo_url: string
+  age: number | null
+  favorite_genres: string[]
+  region: string | null
   is_active: boolean
 }
 
 const emptyForm: FormState = {
   bio: '',
   photo_url: '',
+  age: null,
+  favorite_genres: [],
+  region: null,
   is_active: false,
 }
 
@@ -25,6 +31,9 @@ function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePay
     photo_url: form.photo_url.trim() || null,
     department: identity.department,
     gender: identity.gender,
+    age: form.age,
+    favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
+    region: form.region,
     chat_id: identity.chat_id,
     is_active: form.is_active,
   }
@@ -34,6 +43,9 @@ function fromUser(user: UserOut): FormState {
   return {
     bio: user.bio ?? '',
     photo_url: user.photo_url ?? '',
+    age: user.age ?? null,
+    favorite_genres: user.favorite_genres ?? [],
+    region: user.region ?? null,
     is_active: user.is_active,
   }
 }
@@ -64,6 +76,10 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   const [persistedIsActive, setPersistedIsActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [optionsLoading, setOptionsLoading] = useState(true)
+  const [optionsError, setOptionsError] = useState<string | null>(null)
+  const [musicGenres, setMusicGenres] = useState<string[]>([])
+  const [regions, setRegions] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const firstName = activeUser?.name.trim().split(/\s+/)[0] ?? ''
@@ -110,6 +126,57 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     }
   }, [activeUser])
 
+  useEffect(() => {
+    if (!activeUser) {
+      setOptionsLoading(false)
+      setOptionsError(null)
+      setMusicGenres([])
+      setRegions([])
+      return
+    }
+
+    let cancelled = false
+    setOptionsLoading(true)
+    setOptionsError(null)
+
+    getProfileOptions()
+      .then((options) => {
+        if (cancelled) return
+        setMusicGenres(options.music_genres)
+        setRegions(options.israel_regions)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setOptionsError('Failed to load profile options. Please retry.')
+      })
+      .finally(() => {
+        if (cancelled) return
+        setOptionsLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activeUser])
+
+  const toggleGenre = (genre: string) => {
+    setForm((current) => {
+      if (current.favorite_genres.includes(genre)) {
+        return {
+          ...current,
+          favorite_genres: current.favorite_genres.filter((item) => item !== genre),
+        }
+      }
+      if (current.favorite_genres.length >= 3) {
+        return current
+      }
+      return {
+        ...current,
+        favorite_genres: [...current.favorite_genres, genre],
+      }
+    })
+  }
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!activeUser) {
@@ -137,6 +204,9 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
         ? await updateUser(backendUserId, {
           bio: form.bio.trim() || null,
           photo_url: form.photo_url.trim() || null,
+          age: form.age,
+          favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
+          region: form.region,
           is_active: form.is_active,
         })
         : await createUser(toCreatePayload(form, activeUser))
@@ -198,21 +268,6 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
           Create or update your profile for discovery.
       </p>
 
-      <div className="mb-4 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-3">
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 accent-[var(--accent-primary)]"
-            checked={form.is_active}
-            onChange={(e) => setForm((current) => ({ ...current, is_active: e.target.checked }))}
-            disabled={saving}
-          />
-          <span className="text-sm text-[var(--text-primary)]">
-            Activate my account so I can swipe and appear in discovery.
-          </span>
-        </label>
-      </div>
-
       {error && (
         <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
@@ -223,61 +278,187 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
           {success}
         </p>
       )}
+      {optionsError && (
+        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {optionsError}
+        </p>
+      )}
 
       <form className="space-y-5" onSubmit={onSubmit}>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name</span>
-          <input
-            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-            value={activeUser.name}
-            disabled
-          />
-        </label>
+        <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
+          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+            User information (read-only)
+          </h3>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            Managed by identity source; cannot be edited here.
+          </p>
+          <div className="mt-4 space-y-4">
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">User ID</span>
+              <input
+                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                value={backendUserId ?? 'Will be assigned after first save'}
+                disabled
+              />
+            </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat Link</span>
-          <input
-            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-            value={activeUser.chat_id}
-            disabled
-          />
-        </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name</span>
+              <input
+                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                value={activeUser.name}
+                disabled
+              />
+            </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Department</span>
-          <input
-            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-            value={activeUser.department}
-            disabled
-          />
-        </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat Link</span>
+              <input
+                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                value={activeUser.chat_id}
+                disabled
+              />
+            </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Gender</span>
-          <input
-            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-            value={activeUser.gender}
-            disabled
-          />
-        </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Department</span>
+              <input
+                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                value={activeUser.department}
+                disabled
+              />
+            </label>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Photo URL</span>
-          <input
-            className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-            value={form.photo_url}
-            onChange={(e) => setForm((current) => ({ ...current, photo_url: e.target.value }))}
-          />
-        </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Gender</span>
+              <input
+                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                value={activeUser.gender}
+                disabled
+              />
+            </label>
+          </div>
+        </div>
 
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
-          <textarea
-            className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-            value={form.bio}
-            onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
-          />
-        </label>
+        <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
+          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+            Profile information
+          </h3>
+          <p className="mt-1 text-xs text-[var(--text-secondary)]">
+            This is your editable public profile.
+          </p>
+
+          <div className="mt-4 space-y-4">
+            <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-3">
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 accent-[var(--accent-primary)]"
+                  checked={form.is_active}
+                  onChange={(e) => setForm((current) => ({ ...current, is_active: e.target.checked }))}
+                  disabled={saving}
+                />
+                <span className="text-sm text-[var(--text-primary)]">
+                  Activate my account so I can swipe and appear in discovery.
+                </span>
+              </label>
+            </div>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Age</span>
+              <input
+                type="number"
+                min={18}
+                max={120}
+                className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                value={form.age ?? ''}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    age: e.target.value === '' ? null : Number(e.target.value),
+                  }))
+                }
+              />
+            </label>
+
+            <div>
+              <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                Favorite music genres (up to 3)
+              </p>
+              {optionsLoading ? (
+                <p className="text-xs text-[var(--text-secondary)]">Loading genres...</p>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {musicGenres.map((genre) => {
+                    const selected = form.favorite_genres.includes(genre)
+                    const atLimit = form.favorite_genres.length >= 3 && !selected
+                    return (
+                      <label
+                        key={genre}
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                          selected
+                            ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
+                            : 'border-[var(--border-soft)] bg-[var(--surface-panel)]'
+                        } ${atLimit ? 'opacity-55' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={atLimit}
+                          onChange={() => toggleGenre(genre)}
+                          className="h-4 w-4 accent-[var(--accent-primary)]"
+                        />
+                        <span>{genre}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                Selected: {form.favorite_genres.length}/3
+              </p>
+            </div>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Region</span>
+              <select
+                className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                value={form.region ?? ''}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    region: e.target.value || null,
+                  }))
+                }
+              >
+                <option value="">Select region</option>
+                {regions.map((region) => (
+                  <option key={region} value={region}>
+                    {region}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Photo URL</span>
+              <input
+                className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                value={form.photo_url}
+                onChange={(e) => setForm((current) => ({ ...current, photo_url: e.target.value }))}
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
+              <textarea
+                className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                value={form.bio}
+                onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
+              />
+            </label>
+          </div>
+        </div>
 
         <button
           type="submit"

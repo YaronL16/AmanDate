@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 
 import type { MockAuthUser } from '../mocks/users'
@@ -11,6 +11,7 @@ import type { MatchOut, SwipeDirection, UserCard } from '../lib/api/types'
 
 const PAGE_SIZE = 20
 const SWIPE_THRESHOLD = 120
+const CELEBRATION_EMOJIS = ['🎉', '💖', '✨', '🥳', '💘']
 
 function getFirstName(fullName: string): string {
   const trimmed = fullName.trim()
@@ -320,48 +321,94 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
         </div>
       )}
 
-      {activeMatch ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
-          <div className="w-full max-w-md rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-6 shadow-[0_24px_60px_rgba(16,49,54,0.28)]">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent-primary)]">
-              It&apos;s a Match!
-            </p>
-            <h3 className="mt-2 text-2xl font-semibold tracking-tight">
-              You and {activeMatch.other_user.name} liked each other
-            </h3>
-            <p className="mt-2 text-sm text-[var(--text-secondary)]">
-              Start the conversation now using your configured chat app deep link.
-            </p>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveMatch(null)}
-                className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)]"
-              >
-                Maybe later
-              </button>
-              {activeMatch.chat_thread_url ? (
-                <a
-                  href={activeMatch.chat_thread_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+      <AnimatePresence>
+        {activeMatch ? (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+          >
+            <motion.div
+              className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-8 shadow-[0_24px_60px_rgba(16,49,54,0.28)]"
+              initial={{ opacity: 0, scale: 0.88, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 12 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+            >
+              {CELEBRATION_EMOJIS.map((emoji, index) => (
+                <motion.span
+                  key={`${emoji}-${index}`}
+                  className="pointer-events-none absolute text-xl"
+                  style={{
+                    left: `${14 + index * 16}%`,
+                    top: `${8 + (index % 2) * 10}%`,
+                  }}
+                  initial={{ opacity: 0, y: 6, scale: 0.7 }}
+                  animate={{
+                    opacity: [0, 1, 1, 0],
+                    y: [8, -4, -14, -22],
+                    scale: [0.7, 1, 1.08, 0.95],
+                    rotate: [0, -10, 8, 0],
+                  }}
+                  transition={{
+                    duration: 2.2,
+                    delay: index * 0.12,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatDelay: 0.55,
+                    ease: 'easeOut',
+                  }}
                 >
-                  Open chat
-                </a>
-              ) : (
+                  {emoji}
+                </motion.span>
+              ))}
+
+              <motion.p
+                className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--accent-primary)]"
+                animate={{ scale: [1, 1.04, 1] }}
+                transition={{ duration: 1.2, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
+              >
+                It&apos;s a Match!
+              </motion.p>
+              <h3 className="mt-3 text-3xl font-semibold tracking-tight">
+                You and {activeMatch.other_user.name} liked each other
+              </h3>
+              <p className="mt-3 text-base text-[var(--text-secondary)]">
+                Start the conversation now using your configured chat app deep link.
+              </p>
+              <div className="mt-7 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveMatch(null)}
-                  className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+                  className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)]"
                 >
-                  Close
+                  Maybe later
                 </button>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : null}
+                {activeMatch.chat_thread_url ? (
+                  <a
+                    href={activeMatch.chat_thread_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setActiveMatch(null)}
+                    className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+                  >
+                    Open chat
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveMatch(null)}
+                    className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </section>
   )
 }

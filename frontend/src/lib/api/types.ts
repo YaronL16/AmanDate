@@ -5,6 +5,9 @@ export interface UserOut {
   photo_url: string | null
   department: string | null
   gender: 'male' | 'female' | null
+  age: number | null
+  favorite_genres: string[] | null
+  region: string | null
   chat_id: string
   is_active: boolean
   created_at: string
@@ -24,6 +27,9 @@ export interface UserCreatePayload {
   photo_url?: string | null
   department?: string | null
   gender?: 'male' | 'female' | null
+  age?: number | null
+  favorite_genres?: string[] | null
+  region?: string | null
   chat_id: string
   is_active?: boolean
 }
@@ -34,8 +40,16 @@ export interface UserUpdatePayload {
   photo_url?: string | null
   department?: string | null
   gender?: 'male' | 'female' | null
+  age?: number | null
+  favorite_genres?: string[] | null
+  region?: string | null
   chat_id?: string
   is_active?: boolean
+}
+
+export interface ProfileOptionsOut {
+  music_genres: string[]
+  israel_regions: string[]
 }
 
 export type SwipeDirection = 'left' | 'right'

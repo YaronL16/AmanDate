@@ -1,5 +1,5 @@
 import { apiRequest } from './client'
-import type { UserCreatePayload, UserOut, UserUpdatePayload } from './types'
+import type { ProfileOptionsOut, UserCreatePayload, UserOut, UserUpdatePayload } from './types'
 
 export function listUsers(limit = 100, offset = 0): Promise<UserOut[]> {
   const params = new URLSearchParams({
@@ -18,6 +18,10 @@ export function createUser(payload: UserCreatePayload): Promise<UserOut> {
 
 export function getUser(userId: string): Promise<UserOut> {
   return apiRequest<UserOut>(`/api/users/${userId}`)
+}
+
+export function getProfileOptions(): Promise<ProfileOptionsOut> {
+  return apiRequest<ProfileOptionsOut>('/api/users/options')
 }
 
 export function updateUser(userId: string, payload: UserUpdatePayload): Promise<UserOut> {

@@ -8,6 +8,8 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Integer,
+    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -28,6 +30,9 @@ class User(Base):
     chat_id = Column(String, nullable=False, unique=True)
     department = Column(String, nullable=True)
     gender = Column(Enum("male", "female", name="user_gender"), nullable=True)
+    age = Column(Integer, nullable=True)
+    favorite_genres = Column(JSON, nullable=True)
+    region = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     last_active_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
