@@ -75,3 +75,19 @@ export interface ApiValidationError {
       }>
     | string
 }
+
+export interface AdminSwipeOut {
+  id: string
+  swiper_id: string
+  swiped_id: string
+  direction: 'left' | 'right'
+  created_at: string
+}
+
+export interface AdminMatchOut {
+  id: string
+  user1_id: string
+  user2_id: string
+  created_at: string
+  chat_thread_url: string | null
+}

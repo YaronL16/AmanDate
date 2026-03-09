@@ -3,6 +3,7 @@ import { Link, NavLink, Route, Routes } from 'react-router-dom'
 
 import { MOCK_AUTH_USERS, getMockUserById } from './mocks/users'
 import { clearSessionUserId, getSessionUserId, setSessionUserId } from './lib/session'
+import { AdminPage } from './routes/AdminPage'
 import { MatchesPage } from './routes/MatchesPage'
 import { ProfilePage } from './routes/ProfilePage'
 import { SwipePage } from './routes/SwipePage'
@@ -18,6 +19,9 @@ function getInitialTheme(): boolean {
 }
 
 function App() {
+  const adminViewEnabled = ['1', 'true', 'yes', 'on'].includes(
+    (import.meta.env.VITE_ENABLE_ADMIN_VIEW ?? '').toLowerCase(),
+  )
   const [isDarkMode, setIsDarkMode] = useState(getInitialTheme)
   const [sessionUserId, setSessionUserIdState] = useState<string | null>(getSessionUserId)
   const [pendingUserId, setPendingUserId] = useState<string>(() => getSessionUserId() ?? MOCK_AUTH_USERS[0]?.user_id ?? '')
@@ -81,6 +85,18 @@ function App() {
           >
             Matches
           </NavLink>
+          {adminViewEnabled ? (
+            <NavLink
+              className={({ isActive }) =>
+                `rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${isActive
+                  ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--surface-panel-soft)] hover:text-[var(--text-primary)]'}`
+              }
+              to="/admin"
+            >
+              Admin
+            </NavLink>
+          ) : null}
           <div className="ml-auto flex items-center gap-2">
             <select
               value={pendingUserId}
@@ -132,6 +148,7 @@ function App() {
           <Route path="/" element={<SwipePage activeUser={activeMockUser} />} />
           <Route path="/profile" element={<ProfilePage activeUser={activeMockUser} />} />
           <Route path="/matches" element={<MatchesPage activeUser={activeMockUser} />} />
+          <Route path="/admin" element={<AdminPage activeUser={activeMockUser} />} />
         </Routes>
       </main>
     </div>

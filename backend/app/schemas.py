@@ -79,3 +79,22 @@ class SwipeResult(BaseModel):
     matched: bool
     match: Optional[MatchOut] = None
 
+
+class AdminSwipeOut(BaseModel):
+    id: UUID
+    swiper_id: UUID
+    swiped_id: UUID
+    direction: Literal["right", "left"]
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminMatchOut(BaseModel):
+    id: UUID
+    user1_id: UUID
+    user2_id: UUID
+    created_at: datetime
+    chat_thread_url: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)

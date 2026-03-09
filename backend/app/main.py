@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .db import get_db
 from .config import get_settings
-from . import api_users, api_discovery, api_swipes
+from . import api_users, api_discovery, api_swipes, api_admin
 
 
 app = FastAPI(title="AmanDate API")
@@ -32,4 +32,5 @@ def health_check(db: Session = Depends(get_db)):
 app.include_router(api_users.router)
 app.include_router(api_discovery.router)
 app.include_router(api_swipes.router)
+app.include_router(api_admin.router)
 

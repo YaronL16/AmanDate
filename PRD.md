@@ -256,7 +256,7 @@ Phase 6 (optional): Admin / debug tools
 
 - Implement a simple, environment-protected admin/debug view listing users, swipes, and matches.
 - Allow basic read-only inspection to help diagnose issues in early deployments.
-- **Acceptance criteria**: Admin view is only accessible when explicitly enabled via environment configuration.
+- **Acceptance criteria**: Admin view is only accessible when explicitly enabled via environment configuration and the configured admin user identity (e.g., `ADMIN_USER_ID`).
 
 **8. Non-Functional Requirements**
 
