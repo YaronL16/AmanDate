@@ -1,0 +1,46 @@
+export interface MockAuthUser {
+  user_id: string
+  name: string
+  department: string
+  chat_id: string
+}
+
+export const MOCK_AUTH_USERS: MockAuthUser[] = [
+  {
+    user_id: 'u-avi',
+    name: 'Avi Cohen',
+    department: 'Engineering',
+    chat_id: 'UDEMO001',
+  },
+  {
+    user_id: 'u-noa',
+    name: 'Noa Levi',
+    department: 'Product',
+    chat_id: 'UDEMO002',
+  },
+  {
+    user_id: 'u-yuval',
+    name: 'Yuval Katz',
+    department: 'Design',
+    chat_id: 'UDEMO003',
+  },
+  {
+    user_id: 'u-maya',
+    name: 'Maya Azulay',
+    department: 'Marketing',
+    chat_id: 'UDEMO004',
+  },
+  {
+    user_id: 'u-daniel',
+    name: 'Daniel Mor',
+    department: 'Finance',
+    chat_id: 'UDEMO005',
+  },
+]
+
+export function getMockUserById(userId: string | null): MockAuthUser | null {
+  if (!userId) {
+    return null
+  }
+  return MOCK_AUTH_USERS.find((user) => user.user_id === userId) ?? null
+}

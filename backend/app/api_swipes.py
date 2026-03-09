@@ -29,10 +29,16 @@ def swipe(payload: schemas.SwipeRequest, db: Session = Depends(get_db)):
     swiper = _get_user_or_404(db, payload.swiper_id)
     swiped = _get_user_or_404(db, payload.swiped_id)
 
+    if not swiper.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Enable your account before swiping.",
+        )
+
     if not swiped.is_active or not swiped.chat_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot swipe on inactive users or users without a chat_id.",
+            detail="Cannot swipe on users who have not enabled their account or users without a chat_id.",
         )
 
     # Idempotency: do not create duplicate swipe records.

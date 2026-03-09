@@ -14,7 +14,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    pass
+    is_active: Optional[bool] = None
 
 
 class UserUpdate(BaseModel):
@@ -23,6 +23,7 @@ class UserUpdate(BaseModel):
     photo_url: Optional[str] = None
     department: Optional[str] = None
     chat_id: Optional[str] = Field(None, min_length=1)
+    is_active: Optional[bool] = None
 
 
 class UserOut(BaseModel):

@@ -100,6 +100,24 @@ def test_swipe_404_swiped_not_found(client: TestClient):
     assert r.status_code == 404
 
 
+def test_swipe_400_swiper_not_enabled(client: TestClient):
+    a = client.post("/api/users", json={"name": "Alice", "chat_id": "U28B", "is_active": False})
+    b = client.post("/api/users", json={"name": "Bob", "chat_id": "U28C"})
+    alice_id = a.json()["id"]
+    bob_id = b.json()["id"]
+
+    r = client.post(
+        "/api/swipe",
+        json={
+            "swiper_id": alice_id,
+            "swiped_id": bob_id,
+            "direction": "right",
+        },
+    )
+    assert r.status_code == 400
+    assert "Enable your account" in r.json().get("detail", "")
+
+
 def test_swipe_idempotent_duplicate_same_direction(client: TestClient):
     a = client.post("/api/users", json={"name": "Alice", "chat_id": "U29"})
     b = client.post("/api/users", json={"name": "Bob", "chat_id": "U30"})

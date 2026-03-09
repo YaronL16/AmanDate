@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 
+import type { MockAuthUser } from '../mocks/users'
 import { ApiError } from '../lib/api/client'
 import { getDiscoveryCandidates } from '../lib/api/discovery'
 import { postSwipe } from '../lib/api/swipes'
+import { createUser, findUserByChatId } from '../lib/api/users'
 import type { SwipeDirection, UserCard } from '../lib/api/types'
 
-const CURRENT_USER_KEY = 'amandate.current_user_id'
 const PAGE_SIZE = 20
 const SWIPE_THRESHOLD = 120
 
@@ -30,8 +32,9 @@ function getApiErrorMessage(error: unknown): string {
   return `Request failed (${error.status}). Please retry.`
 }
 
-export function SwipePage() {
-  const [userId, setUserId] = useState<string | null>(null)
+export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
+  const [backendUserId, setBackendUserId] = useState<string | null>(null)
+  const [isEnabled, setIsEnabled] = useState(false)
   const [cards, setCards] = useState<UserCard[]>([])
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -42,14 +45,14 @@ export function SwipePage() {
 
   const topCard = cards[0] ?? null
   const nextCard = cards[1] ?? null
-  const hasUser = Boolean(userId)
+  const hasUser = Boolean(activeUser)
 
   const fetchCandidates = useCallback(
     async (requestedOffset: number, reset: boolean) => {
-      if (!userId) return
+      if (!backendUserId) return
 
       try {
-        const result = await getDiscoveryCandidates(userId, PAGE_SIZE, requestedOffset)
+        const result = await getDiscoveryCandidates(backendUserId, PAGE_SIZE, requestedOffset)
         setError(null)
         setHasExhausted(result.length < PAGE_SIZE)
         setOffset(requestedOffset + result.length)
@@ -61,33 +64,66 @@ export function SwipePage() {
         setLoading(false)
       }
     },
-    [userId],
+    [backendUserId],
   )
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem(CURRENT_USER_KEY)
-    setUserId(storedUserId)
-    if (!storedUserId) {
+    if (!activeUser) {
+      setBackendUserId(null)
+      setCards([])
       setLoading(false)
+      return
     }
-  }, [])
+
+    setLoading(true)
+    setError(null)
+    setSwipeFeedback(null)
+
+    findUserByChatId(activeUser.chat_id)
+      .then((user) => {
+        if (!user) {
+          return createUser({
+            name: activeUser.name,
+            department: activeUser.department,
+            chat_id: activeUser.chat_id,
+            bio: null,
+            photo_url: null,
+            is_active: false,
+          })
+        }
+        return user
+      })
+      .then((user) => {
+        if (!user) return
+        setBackendUserId(user.id)
+        setIsEnabled(user.is_active)
+        if (!user.is_active) {
+          setCards([])
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        setLoading(false)
+        setError('Failed to resolve current user. Please retry.')
+      })
+  }, [activeUser])
 
   useEffect(() => {
-    if (!userId) return
+    if (!backendUserId || !isEnabled) return
     setLoading(true)
     void fetchCandidates(0, true)
-  }, [userId, fetchCandidates])
+  }, [backendUserId, fetchCandidates, isEnabled])
 
   const maybeBackfill = useCallback(async () => {
-    if (!userId || hasExhausted || cards.length > 3) {
+    if (!backendUserId || !isEnabled || hasExhausted || cards.length > 3) {
       return
     }
     await fetchCandidates(offset, false)
-  }, [cards.length, fetchCandidates, hasExhausted, offset, userId])
+  }, [backendUserId, cards.length, fetchCandidates, hasExhausted, isEnabled, offset])
 
   const submitSwipe = useCallback(
     async (direction: SwipeDirection) => {
-      if (!userId || !topCard || isSwiping) {
+      if (!backendUserId || !topCard || isSwiping) {
         return
       }
 
@@ -97,7 +133,7 @@ export function SwipePage() {
 
       try {
         const result = await postSwipe({
-          swiper_id: userId,
+          swiper_id: backendUserId,
           swiped_id: topCard.id,
           direction,
         })
@@ -113,7 +149,7 @@ export function SwipePage() {
         setIsSwiping(false)
       }
     },
-    [isSwiping, topCard, userId],
+    [backendUserId, isSwiping, topCard],
   )
 
   useEffect(() => {
@@ -121,7 +157,7 @@ export function SwipePage() {
   }, [cards.length, maybeBackfill])
 
   const onRetry = () => {
-    if (!userId) return
+    if (!backendUserId) return
     setLoading(true)
     void fetchCandidates(0, true)
   }
@@ -137,8 +173,25 @@ export function SwipePage() {
       <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
         <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
         <p className="mt-3 text-sm text-[var(--text-secondary)]">
-          Create your profile first to start swiping.
+          Login with a test user id to start swiping.
         </p>
+      </section>
+    )
+  }
+
+  if (hasUser && !loading && backendUserId && !isEnabled) {
+    return (
+      <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
+        <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+        <p className="mt-3 text-sm text-[var(--text-secondary)]">
+          Your account is not enabled yet. Enable it in profile to start swiping and appear in discovery.
+        </p>
+        <Link
+          to="/profile"
+          className="mt-4 inline-flex rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
+        >
+          Go to Profile
+        </Link>
       </section>
     )
   }

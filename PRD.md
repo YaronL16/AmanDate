@@ -28,23 +28,27 @@ Out of scope for the MVP (but potential future work):
 High level: a user authenticates via a trusted internal mechanism, creates or updates their profile, discovers other active members, swipes on them, and receives matches with deep links to the chat platform.
 
 - **Authentication & Session**
-  - For the MVP, assume a simple LAN/SSO-backed auth layer or mock login; the app receives a stable internal user identifier and (optionally) a Slack user ID.
-  - On first login, if no profile exists for the authenticated user, the system prompts them to create one.
-  - Authentication implementation details (SSO provider, reverse proxy, etc.) are considered infrastructure concerns and are out of scope for this PRD.
+  - In on-prem production, users authenticate via the organization's IDP/SSO layer, and trusted identity attributes are injected into the app context (`user_id`, `name`, `department`, `chat_id` / Slack link).
+  - In MVP testing mode, use a frontend-only mock login: choose/enter `user_id` from a predefined dataset in code and create a local test session.
+  - Include explicit logout in MVP so testers can switch users quickly.
+  - Authentication implementation details (SSO provider, reverse proxy, etc.) remain infrastructure concerns and are out of scope for this PRD.
 - **Onboarding & Profile Management**
-  - User creates a profile with: name, bio, profile picture URL, department (optional), and `chat_id` (required for deep links).
-  - User can later update profile fields (edit name, bio, photo_url, department). `chat_id` can be updated if their chat handle changes.
-  - Soft deletion/deactivation may be supported via an `is_active` flag; deactivated users do not appear in discovery and cannot be swiped on.
+  - User identity fields (`name`, `department`, `chat_id`) come from IDP in production, and from the MVP dataset in testing mode.
+  - In MVP, profile editing is limited to non-identity fields (`bio`, `photo_url`); identity fields are shown as read-only.
+  - Users must explicitly enable their account from profile before they can swipe or appear in discovery.
+  - Enablement is controlled by `is_active` and must require both a checkbox and user confirmation in profile UX.
+  - When not enabled (`is_active = false`), the user cannot swipe and is hidden from discovery.
 - **Discovery (The Stack)**
   - User sees a stack/list of candidate profiles filtered to:
     - Exclude themselves.
     - Exclude users they have already swiped on.
-    - Exclude inactive users (if `is_active = false`).
+    - Exclude users who are not enabled (`is_active = false`).
   - The API returns results in pages/batches (e.g., up to 20 profiles at a time).
   - Empty state: when no more candidates are available, the UI shows a friendly message (e.g., "You're all caught up") and may suggest checking back later.
   - Simple rate-limiting (e.g., max swipes per minute) can be enforced at the API or gateway level; exact limits can be tuned per deployment.
 - **Swiping & Matching**
   - For each candidate, the user can swipe right (Like) or left (Pass) via gesture or explicit buttons.
+  - The current user must have enabled their account (`is_active = true`) before swiping is allowed.
   - A swipe record is stored for every action.
   - When a right-swipe is recorded, the system checks whether the other user has already right-swiped back:
     - If not, only the swipe is stored.
@@ -151,7 +155,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
   - **Behavior**:
     - Exclude the requesting user.
     - Exclude users already swiped on by the requester.
-    - Exclude users with `is_active = false` or missing `chat_id`.
+    - Exclude users with `is_active = false` (not enabled) or missing `chat_id`.
   - **Responses**:
     - `200 OK` with a list of lightweight user cards (id, name, department, photo_url).
     - `200 OK` with an empty list when there are no more candidates.
@@ -160,6 +164,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
   - **Request body** (Pydantic `SwipeRequest`):
     - `swiper_id`, `swiped_id`, `direction` (`'right'` or `'left'`).
   - **Behavior**:
+    - Reject swipe attempts if `swiper_id` user is not enabled (`is_active = false`).
     - Persist a swipe record.
     - If `direction == 'right'`, check for an existing right-swipe in the opposite direction.
     - If a mutual right-swipe exists and no match record exists yet, create a new match.
@@ -185,6 +190,7 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
   - Layout: centered `Card` containing a form for `name`, `bio`, `photo_url`, `department`, and `chat_id`.
   - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for department), `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
+  - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.
 - **Swipe page (Discovery)**
   - Layout: main `Card` stack in the center with explicit Pass/Like buttons beneath; optional sidebar showing condensed matches list on desktop.
   - Components: `Card`, `CardContent`, `Button` (X / Heart icons via Lucide), Framer Motion for drag gestures (`drag`, `dragConstraints`, `dragElastic`, `onDragEnd`).
@@ -226,8 +232,9 @@ Phase 3: Frontend scaffolding & API integration
 - Initialize Vite React app and install Tailwind CSS + shadcn/ui.
 - Set up routing (e.g., `react-router`) for Profile, Swipe, and Matches views.
 - Implement an API client layer (e.g., using `fetch` or Axios) with typed response models.
-- Build the user profile creation/edit form and wire it to the `/api/users` endpoints.
-- **Acceptance criteria**: A user can load the app, create/update their profile via the UI, and see persisted changes after refresh.
+- Add MVP mock auth flow with a predefined user dataset, login by `user_id`, and logout.
+- Build the user profile form and wire it to the `/api/users` endpoints, with read-only identity fields (`name`, `department`, `chat_id`) and editable non-identity fields (`bio`, `photo_url`).
+- **Acceptance criteria**: A tester can login/logout by `user_id`, load the app as that user, update allowed profile fields via the UI, and see persisted changes after refresh.
 
 Phase 4: Swipe UI
 

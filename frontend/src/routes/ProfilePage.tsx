@@ -1,45 +1,39 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 
+import type { MockAuthUser } from '../mocks/users'
 import { ApiError } from '../lib/api/client'
-import { createUser, getUser, updateUser } from '../lib/api/users'
+import { createUser, findUserByChatId, updateUser } from '../lib/api/users'
 import type { ApiValidationError, UserCreatePayload, UserOut } from '../lib/api/types'
 
-const CURRENT_USER_KEY = 'amandate.current_user_id'
-
 type FormState = {
-  name: string
   bio: string
   photo_url: string
-  department: string
-  chat_id: string
+  is_active: boolean
 }
 
 const emptyForm: FormState = {
-  name: '',
   bio: '',
   photo_url: '',
-  department: '',
-  chat_id: '',
+  is_active: false,
 }
 
-function toPayload(form: FormState): UserCreatePayload {
+function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePayload {
   return {
-    name: form.name.trim(),
+    name: identity.name,
     bio: form.bio.trim() || null,
     photo_url: form.photo_url.trim() || null,
-    department: form.department.trim() || null,
-    chat_id: form.chat_id.trim(),
+    department: identity.department,
+    chat_id: identity.chat_id,
+    is_active: form.is_active,
   }
 }
 
 function fromUser(user: UserOut): FormState {
   return {
-    name: user.name,
     bio: user.bio ?? '',
     photo_url: user.photo_url ?? '',
-    department: user.department ?? '',
-    chat_id: user.chat_id,
+    is_active: user.is_active,
   }
 }
 
@@ -63,35 +57,45 @@ function getApiErrorMessage(error: unknown): string {
   return `Request failed (${error.status}). Please retry.`
 }
 
-export function ProfilePage() {
-  const [userId, setUserId] = useState<string | null>(null)
+export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null }) {
+  const [backendUserId, setBackendUserId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
+  const [persistedIsActive, setPersistedIsActive] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const isEditMode = useMemo(() => Boolean(userId), [userId])
-
   useEffect(() => {
-    const storedUserId = localStorage.getItem(CURRENT_USER_KEY)
-    if (!storedUserId) {
+    if (!activeUser) {
+      setBackendUserId(null)
+      setForm(emptyForm)
+      setPersistedIsActive(false)
       setLoading(false)
       return
     }
 
     let cancelled = false
+    setLoading(true)
+    setError(null)
+    setSuccess(null)
 
-    getUser(storedUserId)
+    findUserByChatId(activeUser.chat_id)
       .then((user) => {
         if (cancelled) return
-        setUserId(user.id)
+        if (!user) {
+          setBackendUserId(null)
+          setForm(emptyForm)
+          setPersistedIsActive(false)
+          return
+        }
+        setBackendUserId(user.id)
         setForm(fromUser(user))
+        setPersistedIsActive(user.is_active)
       })
       .catch(() => {
         if (cancelled) return
-        localStorage.removeItem(CURRENT_USER_KEY)
-        setUserId(null)
+        setError('Failed to load profile. Please retry.')
       })
       .finally(() => {
         if (!cancelled) {
@@ -102,36 +106,59 @@ export function ProfilePage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeUser])
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!activeUser) {
+      setError('Please login with a test user id first.')
+      return
+    }
+
     setError(null)
     setSuccess(null)
 
-    const payload = toPayload(form)
-
-    if (!payload.name || !payload.chat_id) {
-      setError('Name and chat_id are required.')
-      return
+    const enablingNow = !persistedIsActive && form.is_active
+    if (enablingNow) {
+      const confirmed = window.confirm(
+        'Enable account now? Once enabled, you will be visible in discovery and can swipe.',
+      )
+      if (!confirmed) {
+        return
+      }
     }
 
     setSaving(true)
 
     try {
-      const user = userId
-        ? await updateUser(userId, payload)
-        : await createUser(payload)
+      const user = backendUserId
+        ? await updateUser(backendUserId, {
+          bio: form.bio.trim() || null,
+          photo_url: form.photo_url.trim() || null,
+          is_active: form.is_active,
+        })
+        : await createUser(toCreatePayload(form, activeUser))
 
-      setUserId(user.id)
-      localStorage.setItem(CURRENT_USER_KEY, user.id)
+      setBackendUserId(user.id)
       setForm(fromUser(user))
-      setSuccess(userId ? 'Profile updated.' : 'Profile created.')
+      setPersistedIsActive(user.is_active)
+      setSuccess(backendUserId ? 'Profile updated.' : 'Profile created.')
     } catch (submitError) {
       setError(getApiErrorMessage(submitError))
     } finally {
       setSaving(false)
     }
+  }
+
+  if (!activeUser) {
+    return (
+      <section className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
+        <h2 className="text-2xl font-semibold tracking-tight">Profile</h2>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">
+          Login with a test user id to view and edit your profile.
+        </p>
+      </section>
+    )
   }
 
   if (loading) {
@@ -148,17 +175,32 @@ export function ProfilePage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Profile</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            {isEditMode ? 'Editing saved profile' : 'New profile setup'}
+            {backendUserId ? 'Editing saved profile' : 'New profile setup'}
           </p>
         </div>
         <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-primary-strong)]">
-          {isEditMode ? 'Ready to update' : 'Onboarding'}
+          Identity from test dataset
         </span>
       </div>
 
       <p className="mb-6 text-sm text-[var(--text-secondary)]">
           Create or update your profile for discovery.
       </p>
+
+      <div className="mb-4 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-3">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            className="mt-0.5 h-4 w-4 accent-[var(--accent-primary)]"
+            checked={form.is_active}
+            onChange={(e) => setForm((current) => ({ ...current, is_active: e.target.checked }))}
+            disabled={saving}
+          />
+          <span className="text-sm text-[var(--text-primary)]">
+            Enable my account so I can swipe and appear in discovery.
+          </span>
+        </label>
+      </div>
 
       {error && (
         <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -173,31 +215,29 @@ export function ProfilePage() {
 
       <form className="space-y-5" onSubmit={onSubmit}>
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name *</span>
+          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name</span>
           <input
-            className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-            value={form.name}
-            onChange={(e) => setForm((current) => ({ ...current, name: e.target.value }))}
-            required
+            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+            value={activeUser.name}
+            disabled
           />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat ID *</span>
+          <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat Link</span>
           <input
-            className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-            value={form.chat_id}
-            onChange={(e) => setForm((current) => ({ ...current, chat_id: e.target.value }))}
-            required
+            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+            value={activeUser.chat_id}
+            disabled
           />
         </label>
 
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Department</span>
           <input
-            className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-            value={form.department}
-            onChange={(e) => setForm((current) => ({ ...current, department: e.target.value }))}
+            className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+            value={activeUser.department}
+            disabled
           />
         </label>
 
@@ -224,7 +264,7 @@ export function ProfilePage() {
           className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
           disabled={saving}
         >
-          {saving ? 'Saving...' : isEditMode ? 'Update profile' : 'Create profile'}
+          {saving ? 'Saving...' : backendUserId ? 'Update profile' : 'Create profile'}
         </button>
       </form>
     </section>
