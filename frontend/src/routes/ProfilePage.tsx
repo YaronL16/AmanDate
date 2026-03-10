@@ -72,6 +72,7 @@ function getApiErrorMessage(error: unknown): string {
 
 export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   const [backendUserId, setBackendUserId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'profile' | 'user-info'>('profile')
   const [form, setForm] = useState<FormState>(emptyForm)
   const [persistedIsActive, setPersistedIsActive] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -285,188 +286,217 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       )}
 
       <form className="space-y-5" onSubmit={onSubmit}>
-        <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
-          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-            User information (read-only)
-          </h3>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            Managed by identity source; cannot be edited here.
-          </p>
-          <div className="mt-4 space-y-4">
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">User ID</span>
-              <input
-                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                value={backendUserId ?? 'Will be assigned after first save'}
-                disabled
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name</span>
-              <input
-                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                value={activeUser.name}
-                disabled
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat Link</span>
-              <input
-                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                value={activeUser.chat_id}
-                disabled
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Department</span>
-              <input
-                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                value={activeUser.department}
-                disabled
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Gender</span>
-              <input
-                className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                value={activeUser.gender}
-                disabled
-              />
-            </label>
-          </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('profile')}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              activeTab === 'profile'
+                ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            Profile
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('user-info')}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              activeTab === 'user-info'
+                ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            My account
+          </button>
         </div>
 
-        <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
-          <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-            Profile information
-          </h3>
-          <p className="mt-1 text-xs text-[var(--text-secondary)]">
-            This is your editable public profile.
-          </p>
+        {activeTab === 'profile' ? (
+          <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+              Profile information
+            </h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              This is your editable public profile.
+            </p>
 
-          <div className="mt-4 space-y-4">
-            <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-3">
-              <label className="flex items-start gap-3">
+            <div className="mt-4 space-y-4">
+              <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-3">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 accent-[var(--accent-primary)]"
+                    checked={form.is_active}
+                    onChange={(e) => setForm((current) => ({ ...current, is_active: e.target.checked }))}
+                    disabled={saving}
+                  />
+                  <span className="text-sm text-[var(--text-primary)]">
+                    Activate my account so I can swipe and appear in discovery.
+                  </span>
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Age</span>
                 <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 accent-[var(--accent-primary)]"
-                  checked={form.is_active}
-                  onChange={(e) => setForm((current) => ({ ...current, is_active: e.target.checked }))}
-                  disabled={saving}
+                  type="number"
+                  min={18}
+                  max={120}
+                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  value={form.age ?? ''}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      age: e.target.value === '' ? null : Number(e.target.value),
+                    }))
+                  }
                 />
-                <span className="text-sm text-[var(--text-primary)]">
-                  Activate my account so I can swipe and appear in discovery.
-                </span>
+              </label>
+
+              <div>
+                <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                  Favorite music genres (up to 3)
+                </p>
+                {optionsLoading ? (
+                  <p className="text-xs text-[var(--text-secondary)]">Loading genres...</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {musicGenres.map((genre) => {
+                      const selected = form.favorite_genres.includes(genre)
+                      const atLimit = form.favorite_genres.length >= 3 && !selected
+                      return (
+                        <label
+                          key={genre}
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                            selected
+                              ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
+                              : 'border-[var(--border-soft)] bg-[var(--surface-panel)]'
+                          } ${atLimit ? 'opacity-55' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            disabled={atLimit}
+                            onChange={() => toggleGenre(genre)}
+                            className="h-4 w-4 accent-[var(--accent-primary)]"
+                          />
+                          <span>{genre}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-[var(--text-secondary)]">
+                  Selected: {form.favorite_genres.length}/3
+                </p>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Region</span>
+                <select
+                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  value={form.region ?? ''}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      region: e.target.value || null,
+                    }))
+                  }
+                >
+                  <option value="">Select region</option>
+                  {regions.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Photo URL</span>
+                <input
+                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  value={form.photo_url}
+                  onChange={(e) => setForm((current) => ({ ...current, photo_url: e.target.value }))}
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
+                <textarea
+                  className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  value={form.bio}
+                  onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
+                />
               </label>
             </div>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Age</span>
-              <input
-                type="number"
-                min={18}
-                max={120}
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                value={form.age ?? ''}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    age: e.target.value === '' ? null : Number(e.target.value),
-                  }))
-                }
-              />
-            </label>
-
-            <div>
-              <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                Favorite music genres (up to 3)
-              </p>
-              {optionsLoading ? (
-                <p className="text-xs text-[var(--text-secondary)]">Loading genres...</p>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {musicGenres.map((genre) => {
-                    const selected = form.favorite_genres.includes(genre)
-                    const atLimit = form.favorite_genres.length >= 3 && !selected
-                    return (
-                      <label
-                        key={genre}
-                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
-                          selected
-                            ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
-                            : 'border-[var(--border-soft)] bg-[var(--surface-panel)]'
-                        } ${atLimit ? 'opacity-55' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={atLimit}
-                          onChange={() => toggleGenre(genre)}
-                          className="h-4 w-4 accent-[var(--accent-primary)]"
-                        />
-                        <span>{genre}</span>
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
-              <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                Selected: {form.favorite_genres.length}/3
-              </p>
-            </div>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Region</span>
-              <select
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                value={form.region ?? ''}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    region: e.target.value || null,
-                  }))
-                }
-              >
-                <option value="">Select region</option>
-                {regions.map((region) => (
-                  <option key={region} value={region}>
-                    {region}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Photo URL</span>
-              <input
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                value={form.photo_url}
-                onChange={(e) => setForm((current) => ({ ...current, photo_url: e.target.value }))}
-              />
-            </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
-              <textarea
-                className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                value={form.bio}
-                onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
-              />
-            </label>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+              User information (read-only)
+            </h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Managed by identity source; cannot be edited here.
+            </p>
+            <div className="mt-4 space-y-4">
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">User ID</span>
+                <input
+                  className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                  value={backendUserId ?? 'Will be assigned after first save'}
+                  disabled
+                />
+              </label>
 
-        <button
-          type="submit"
-          className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save profile'}
-        </button>
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name</span>
+                <input
+                  className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                  value={activeUser.name}
+                  disabled
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat Link</span>
+                <input
+                  className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                  value={activeUser.chat_id}
+                  disabled
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Department</span>
+                <input
+                  className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                  value={activeUser.department}
+                  disabled
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Gender</span>
+                <input
+                  className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
+                  value={activeUser.gender}
+                  disabled
+                />
+              </label>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'profile' ? (
+          <button
+            type="submit"
+            className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save profile'}
+          </button>
+        ) : null}
       </form>
     </section>
   )

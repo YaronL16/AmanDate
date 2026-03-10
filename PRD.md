@@ -196,6 +196,7 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
 
 - **Onboarding / Profile page**
   - Layout: centered `Card` containing a form for identity fields (`name`, `department`, `gender`, `chat_id`) plus editable profile fields.
+  - Information architecture: split into separate tabs for read-only `My account` and editable `Profile`.
   - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for `region`), checkbox group/multi-select (for `favorite_genres`), `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
   - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.
