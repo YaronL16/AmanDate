@@ -7,6 +7,8 @@ import { createUser, findUserByChatId, getProfileOptions, updateUser } from '../
 import type { ApiValidationError, UserCreatePayload, UserOut } from '../lib/api/types'
 
 type DiscoveryGender = 'male' | 'female'
+const AGE_RANGE_MIN = 18
+const AGE_RANGE_MAX = 80
 
 type FormState = {
   bio: string
@@ -35,6 +37,9 @@ const emptyForm: FormState = {
 }
 
 function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePayload {
+  const isAnyDesiredAge =
+    form.preferred_age_min === AGE_RANGE_MIN && form.preferred_age_max === AGE_RANGE_MAX
+
   return {
     name: identity.name,
     bio: form.bio.trim() || null,
@@ -44,8 +49,8 @@ function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePay
     age: form.age,
     favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
     region: form.region,
-    preferred_age_min: form.preferred_age_min,
-    preferred_age_max: form.preferred_age_max,
+    preferred_age_min: isAnyDesiredAge ? null : form.preferred_age_min,
+    preferred_age_max: isAnyDesiredAge ? null : form.preferred_age_max,
     preferred_regions: form.preferred_regions.length ? form.preferred_regions : null,
     preferred_genders: form.preferred_genders.length ? form.preferred_genders : null,
     chat_id: identity.chat_id,
@@ -104,6 +109,17 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const firstName = activeUser?.name.trim().split(/\s+/)[0] ?? ''
+  const desiredAgeMin = form.preferred_age_min ?? AGE_RANGE_MIN
+  const desiredAgeMax = form.preferred_age_max ?? AGE_RANGE_MAX
+  const desiredAgeMinPercent =
+    ((desiredAgeMin - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+  const desiredAgeMaxPercent =
+    ((desiredAgeMax - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
+  const desiredAgeLabel =
+    form.preferred_age_min === null && form.preferred_age_max === null
+      ? 'Any age'
+      : `${desiredAgeMin} - ${desiredAgeMax}`
+  const desiredAgeBubbleCenterPercent = (desiredAgeMinPercent + desiredAgeMaxPercent) / 2
 
   useEffect(() => {
     if (!activeUser) {
@@ -230,6 +246,28 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     })
   }
 
+  const setDesiredAgeMin = (nextMin: number) => {
+    setForm((current) => {
+      const currentMax = current.preferred_age_max ?? AGE_RANGE_MAX
+      return {
+        ...current,
+        preferred_age_min: nextMin,
+        preferred_age_max: Math.max(nextMin, currentMax),
+      }
+    })
+  }
+
+  const setDesiredAgeMax = (nextMax: number) => {
+    setForm((current) => {
+      const currentMin = current.preferred_age_min ?? AGE_RANGE_MIN
+      return {
+        ...current,
+        preferred_age_min: Math.min(currentMin, nextMax),
+        preferred_age_max: nextMax,
+      }
+    })
+  }
+
   const setPhotoAt = (index: number, value: string) => {
     setForm((current) => ({
       ...current,
@@ -291,13 +329,20 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     try {
       const user = backendUserId
         ? await updateUser(backendUserId, {
+          // Keep 18-120 as unrestricted age preference in backend.
+          preferred_age_min:
+            form.preferred_age_min === AGE_RANGE_MIN && form.preferred_age_max === AGE_RANGE_MAX
+              ? null
+              : form.preferred_age_min,
+          preferred_age_max:
+            form.preferred_age_min === AGE_RANGE_MIN && form.preferred_age_max === AGE_RANGE_MAX
+              ? null
+              : form.preferred_age_max,
           bio: form.bio.trim() || null,
           photo_urls: form.photo_urls.map((url) => url.trim()).filter(Boolean),
           age: form.age,
           favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
           region: form.region,
-          preferred_age_min: form.preferred_age_min,
-          preferred_age_max: form.preferred_age_max,
           preferred_regions: form.preferred_regions.length ? form.preferred_regions : null,
           preferred_genders: form.preferred_genders.length ? form.preferred_genders : null,
           is_active: form.is_active,
@@ -451,11 +496,13 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               </div>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Age</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+                  Age <span className="text-red-600">*</span>
+                </span>
                 <input
                   type="number"
                   min={18}
-                  max={120}
+                  max={80}
                   className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && form.age === null ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
                   value={form.age ?? ''}
                   onChange={(e) =>
@@ -468,6 +515,41 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                 {showRequiredHints && form.age === null ? (
                   <p className="mt-1 text-xs text-red-600">Age is required.</p>
                 ) : null}
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+                  Region <span className="text-red-600">*</span>
+                </span>
+                <select
+                  className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && !form.region ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
+                  value={form.region ?? ''}
+                  onChange={(e) =>
+                    setForm((current) => ({
+                      ...current,
+                      region: e.target.value || null,
+                    }))
+                  }
+                >
+                  <option value="">Select region</option>
+                  {regions.map((region) => (
+                    <option key={region} value={region}>
+                      {region}
+                    </option>
+                  ))}
+                </select>
+                {showRequiredHints && !form.region ? (
+                  <p className="mt-1 text-xs text-red-600">Region is required.</p>
+                ) : null}
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
+                <textarea
+                  className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  value={form.bio}
+                  onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
+                />
               </label>
 
               <div>
@@ -507,39 +589,6 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                   Selected: {form.favorite_genres.length}/3
                 </p>
               </div>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Region</span>
-                <select
-                  className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && !form.region ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
-                  value={form.region ?? ''}
-                  onChange={(e) =>
-                    setForm((current) => ({
-                      ...current,
-                      region: e.target.value || null,
-                    }))
-                  }
-                >
-                  <option value="">Select region</option>
-                  {regions.map((region) => (
-                    <option key={region} value={region}>
-                      {region}
-                    </option>
-                  ))}
-                </select>
-                {showRequiredHints && !form.region ? (
-                  <p className="mt-1 text-xs text-red-600">Region is required.</p>
-                ) : null}
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
-                <textarea
-                  className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                  value={form.bio}
-                  onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
-                />
-              </label>
             </div>
           </div>
         ) : activeTab === 'photos' ? (
@@ -593,52 +642,71 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               Discovery preferences
             </h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Configure who you want to discover. Leave fields empty for no restriction.
+              Configure who you want to discover. Use "Clear" for unrestricted desired age.
             </p>
 
             <div className="mt-4 space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-                    Preferred minimum age
-                  </span>
-                  <input
-                    type="number"
-                    min={18}
-                    max={120}
-                    className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                    value={form.preferred_age_min ?? ''}
-                    onChange={(e) =>
+              <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-[var(--text-primary)]">Desired age range</p>
+                  <button
+                    type="button"
+                    className="rounded-md border border-[var(--border-soft)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--accent-soft)]"
+                    onClick={() =>
                       setForm((current) => ({
                         ...current,
-                        preferred_age_min: e.target.value === '' ? null : Number(e.target.value),
+                        preferred_age_min: null,
+                        preferred_age_max: null,
                       }))
                     }
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-                    Preferred maximum age
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="mb-3 flex justify-center">
+                  <span
+                    className="relative inline-flex min-w-24 justify-center rounded-md bg-[var(--accent-primary)] px-3 py-1.5 text-sm font-semibold text-white"
+                    style={{
+                      left: `calc(${desiredAgeBubbleCenterPercent - 50}% * 0.2)`,
+                    }}
+                  >
+                    {desiredAgeLabel}
+                    <span className="absolute -bottom-2 h-0 w-0 border-x-8 border-t-8 border-x-transparent border-t-[var(--accent-primary)]" />
                   </span>
-                  <input
-                    type="number"
-                    min={18}
-                    max={120}
-                    className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                    value={form.preferred_age_max ?? ''}
-                    onChange={(e) =>
-                      setForm((current) => ({
-                        ...current,
-                        preferred_age_max: e.target.value === '' ? null : Number(e.target.value),
-                      }))
-                    }
+                </div>
+                <div className="relative h-10">
+                  <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--border-soft)] opacity-80" />
+                  <div
+                    className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[var(--accent-primary)]"
+                    style={{
+                      left: `${desiredAgeMinPercent}%`,
+                      right: `${100 - desiredAgeMaxPercent}%`,
+                    }}
                   />
-                </label>
+                  <input
+                    type="range"
+                    min={AGE_RANGE_MIN}
+                    max={AGE_RANGE_MAX}
+                    value={desiredAgeMin}
+                    aria-label="Desired minimum age"
+                    className="pointer-events-none absolute left-0 top-1/2 z-30 h-1 w-full -translate-y-1/2 appearance-none bg-transparent accent-[var(--accent-primary)] [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--accent-primary)] [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--accent-primary)] [&::-moz-range-thumb]:bg-white"
+                    onChange={(e) => setDesiredAgeMin(Number(e.target.value))}
+                  />
+                  <input
+                    type="range"
+                    min={AGE_RANGE_MIN}
+                    max={AGE_RANGE_MAX}
+                    value={desiredAgeMax}
+                    aria-label="Desired maximum age"
+                    className="pointer-events-none absolute left-0 top-1/2 z-20 h-1 w-full -translate-y-1/2 appearance-none bg-transparent accent-[var(--accent-primary)] [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--accent-primary)] [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--accent-primary)] [&::-moz-range-thumb]:bg-white"
+                    onChange={(e) => setDesiredAgeMax(Number(e.target.value))}
+                  />
+                </div>
               </div>
 
               <div>
                 <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                  Preferred regions
+                  Desired regions
                 </p>
                 {optionsLoading ? (
                   <p className="text-xs text-[var(--text-secondary)]">Loading regions...</p>
@@ -671,7 +739,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
 
               <div>
                 <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                  Preferred genders
+                  Desired genders
                 </p>
                 {optionsLoading ? (
                   <p className="text-xs text-[var(--text-secondary)]">Loading genders...</p>

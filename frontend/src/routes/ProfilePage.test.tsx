@@ -144,8 +144,8 @@ describe('ProfilePage', () => {
     fireEvent.change(scoped.getByLabelText(/^Region$/), { target: { value: 'Center' } })
 
     fireEvent.click(scoped.getByRole('button', { name: 'Preferences' }))
-    fireEvent.change(scoped.getByLabelText('Preferred minimum age'), { target: { value: '27' } })
-    fireEvent.change(scoped.getByLabelText('Preferred maximum age'), { target: { value: '36' } })
+    fireEvent.change(scoped.getByLabelText('Desired minimum age'), { target: { value: '27' } })
+    fireEvent.change(scoped.getByLabelText('Desired maximum age'), { target: { value: '36' } })
     fireEvent.click(scoped.getByLabelText('Center'))
     fireEvent.click(scoped.getByLabelText('male'))
     fireEvent.click(scoped.getByRole('button', { name: 'Save profile' }))
