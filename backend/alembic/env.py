@@ -1,6 +1,7 @@
 from logging.config import fileConfig
 import os
 import sys
+from urllib.parse import quote
 
 from sqlalchemy import engine_from_config, pool
 from alembic import context
@@ -25,10 +26,20 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg2://amandate:amandate@localhost:5432/amandate",
-    )
+    explicit_url = os.getenv("DATABASE_URL", "").strip()
+    if explicit_url:
+        return explicit_url
+
+    db_host = os.getenv("DB_HOST", "localhost").strip()
+    db_port = os.getenv("DB_PORT", "5432").strip()
+    db_name = os.getenv("DB_NAME", "amandate").strip()
+    db_user = os.getenv("DB_USER", "amandate").strip()
+    db_password = os.getenv("DB_PASSWORD", "amandate")
+    db_driver = os.getenv("DB_DRIVER", "postgresql+psycopg2").strip()
+
+    encoded_user = quote(db_user, safe="")
+    encoded_password = quote(db_password, safe="")
+    return f"{db_driver}://{encoded_user}:{encoded_password}@{db_host}:{db_port}/{db_name}"
 
 
 def run_migrations_offline() -> None:

@@ -8,6 +8,10 @@ export interface UserOut {
   age: number | null
   favorite_genres: string[] | null
   region: string | null
+  preferred_age_min: number | null
+  preferred_age_max: number | null
+  preferred_regions: string[] | null
+  preferred_genders: ('male' | 'female')[] | null
   chat_id: string
   is_active: boolean
   created_at: string
@@ -34,6 +38,10 @@ export interface UserCreatePayload {
   age?: number | null
   favorite_genres?: string[] | null
   region?: string | null
+  preferred_age_min?: number | null
+  preferred_age_max?: number | null
+  preferred_regions?: string[] | null
+  preferred_genders?: ('male' | 'female')[] | null
   chat_id: string
   is_active?: boolean
 }
@@ -47,6 +55,10 @@ export interface UserUpdatePayload {
   age?: number | null
   favorite_genres?: string[] | null
   region?: string | null
+  preferred_age_min?: number | null
+  preferred_age_max?: number | null
+  preferred_regions?: string[] | null
+  preferred_genders?: ('male' | 'female')[] | null
   chat_id?: string
   is_active?: boolean
 }
@@ -54,6 +66,7 @@ export interface UserUpdatePayload {
 export interface ProfileOptionsOut {
   music_genres: string[]
   israel_regions: string[]
+  discovery_genders: ('male' | 'female')[]
 }
 
 export type SwipeDirection = 'left' | 'right'

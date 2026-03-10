@@ -43,6 +43,12 @@ High level: a user authenticates via a trusted internal mechanism, creates or up
     - Exclude themselves.
     - Exclude users they have already swiped on.
     - Exclude users who are not enabled (`is_active = false`).
+    - Apply the requester's saved discovery preferences, where configured:
+      - Candidate age is within `preferred_age_min` / `preferred_age_max`.
+      - Candidate region is included in `preferred_regions`.
+      - Candidate gender is included in `preferred_genders`.
+    - Empty/null discovery preference values mean "no restriction" for that dimension.
+    - Candidate must satisfy all configured (non-empty) preference dimensions.
   - The API returns results in pages/batches (e.g., up to 20 profiles at a time).
   - Empty state: when no more candidates are available, the UI shows a friendly message (e.g., "You're all caught up") and may suggest checking back later.
   - Simple rate-limiting (e.g., max swipes per minute) can be enforced at the API or gateway level; exact limits can be tuned per deployment.
@@ -77,6 +83,10 @@ users table:
 - age (Integer, nullable, expected range 18-120)
 - favorite_genres (Array/JSON of String, nullable, max 3 entries)
 - region (String, nullable, one value from the maintained Israel regions list)
+- preferred_age_min (Integer, nullable, range 18-120)
+- preferred_age_max (Integer, nullable, range 18-120, must be `>= preferred_age_min` when both are set)
+- preferred_regions (Array/JSON of String, nullable, values from maintained Israel regions list)
+- preferred_genders (Array/JSON of String, nullable, values from allowed gender list)
 - chat_id (String - e.g., Slack user ID, required for the deep link, **unique**)
 - department (String, optional)
 - gender (Enum/String, one of `male` or `female`; immutable identity field sourced from IDP/dataset in MVP)
@@ -87,6 +97,7 @@ users table:
 Indexes / constraints:
 
 - Unique constraint on `chat_id`.
+- Check constraint ensuring `preferred_age_min <= preferred_age_max` when both are set.
 - Index on `department` for simple filtering/grouping.
 - Index on `created_at` and/or `last_active_at` for ordering and housekeeping.
 
@@ -128,7 +139,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
 - `POST /api/users`
   - **Description**: Create a new user profile.
   - **Request body** (Pydantic `UserCreate`):
-    - `name`, `bio`, `photo_urls`, `age`, `favorite_genres`, `region`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
+    - `name`, `bio`, `photo_urls`, `age`, `favorite_genres`, `region`, `preferred_age_min`, `preferred_age_max`, `preferred_regions`, `preferred_genders`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
   - **Responses**:
     - `201 Created` with the created `User` object.
     - `400 Bad Request` for validation errors (e.g., missing `chat_id`).
@@ -140,11 +151,11 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - `404 Not Found` if the user does not exist.
 - `PUT /api/users/{user_id}`
   - **Description**: Update an existing user profile.
-  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_urls`, `age`, `favorite_genres`, `region`, `department`, `gender`, `chat_id`.
+  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_urls`, `age`, `favorite_genres`, `region`, `preferred_age_min`, `preferred_age_max`, `preferred_regions`, `preferred_genders`, `department`, `gender`, `chat_id`.
 - `GET /api/users/options`
   - **Description**: Return backend-maintained choice lists for profile fields.
   - **Responses**:
-    - `200 OK` with `music_genres` and `israel_regions`.
+    - `200 OK` with `music_genres`, `israel_regions`, and `discovery_genders`.
   - **Responses**:
     - `200 OK` with updated `User` object.
     - `400 Bad Request` for invalid fields.
@@ -164,6 +175,12 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - Exclude the requesting user.
     - Exclude users already swiped on by the requester.
     - Exclude users with `is_active = false` (not enabled) or missing `chat_id`.
+    - Apply requester's persisted discovery preferences:
+      - Age range: `preferred_age_min`/`preferred_age_max`.
+      - Regions allowlist: `preferred_regions`.
+      - Genders allowlist: `preferred_genders`.
+    - Treat null/empty preference fields as unrestricted dimensions.
+    - Reject invalid preference payloads with validation errors.
   - **Responses**:
     - `200 OK` with a list of lightweight user cards (id, name, age, region, favorite_genres, bio, photo_urls).
     - `200 OK` with an empty list when there are no more candidates.
@@ -196,9 +213,10 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
 
 - **Onboarding / Profile page**
   - Layout: centered `Card` containing a form for identity fields (`name`, `department`, `gender`, `chat_id`) plus editable profile fields.
-  - Information architecture: split into separate tabs for read-only `My account` and editable `Profile`.
+  - Information architecture: split into separate tabs for read-only `My account`, editable `Profile`, and editable `Preferences`.
   - Add a dedicated `Photos` tab for managing up to 5 photo URLs with preview.
-  - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for `region`), checkbox group/multi-select (for `favorite_genres`), photo URL list inputs (max 5) with add/remove, `Button`, `Avatar` preview.
+  - Preferences tab fields: preferred age range (slider with min+max), desired regions (multi-select), desired genders (multi-select).
+  - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for `region`), checkbox group/multi-select (for `favorite_genres`, desired regions, desired genders), numeric inputs (age preference min/max), photo URL list inputs (max 5) with add/remove, `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
   - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.
 - **Home page (Swipe Discovery)**
@@ -269,6 +287,23 @@ Phase 6 (optional): Admin / debug tools
 - Implement a simple, environment-protected admin/debug view listing users, swipes, and matches.
 - Allow basic read-only inspection to help diagnose issues in early deployments.
 - **Acceptance criteria**: Admin view is only accessible when explicitly enabled via environment configuration and the configured admin user identity (e.g., `ADMIN_USER_ID`).
+
+Phase 7: Discovery preferences (backend + frontend)
+
+- Add an Alembic migration for `users.preferred_age_min`, `users.preferred_age_max`, `users.preferred_regions`, and `users.preferred_genders`.
+- Update SQLAlchemy `User` model and Pydantic schemas to support discovery preference fields and validation:
+  - `preferred_age_min` / `preferred_age_max` each in range 18-120.
+  - `preferred_age_min <= preferred_age_max` when both are provided.
+  - `preferred_regions` values must come from backend-maintained Israel regions list.
+  - `preferred_genders` values must come from allowed gender enum list.
+- Update `POST /api/users` and `PUT /api/users/{user_id}` to persist the new preference fields.
+- Update `GET /api/discovery/{user_id}` query logic to apply the requester's preference filters while preserving existing exclusions (`self`, already-swiped, inactive, missing `chat_id`).
+- Add/extend backend and frontend tests to cover:
+  - Saving/loading preferences.
+  - Validation failures for invalid ranges/values.
+  - Discovery output honoring each preference filter and combined filters.
+  - Null/empty preferences behaving as no filter.
+- **Acceptance criteria**: A user can configure preferences in Profile and discovery results only include candidates matching configured filters; all new tests pass.
 
 **8. Non-Functional Requirements**
 

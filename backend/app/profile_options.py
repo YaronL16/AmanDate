@@ -25,3 +25,5 @@ ISRAEL_REGIONS = [
     "The Negev",
     "Eilat Area",
 ]
+
+DISCOVERY_GENDERS = ["male", "female"]

@@ -27,7 +27,10 @@ class Settings:
         self.database_url: str = _resolve_database_url()
         self.cors_allowed_origins: List[str] = [
             origin.strip()
-            for origin in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+            for origin in os.getenv(
+                "CORS_ALLOWED_ORIGINS",
+                "http://localhost:5173,http://127.0.0.1:5173",
+            ).split(",")
             if origin.strip()
         ]
         self.chat_deep_link_base_url: str = os.getenv("CHAT_DEEP_LINK_BASE_URL", "").strip()

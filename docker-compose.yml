@@ -27,7 +27,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: ${DB_HOST:-db}
+      DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-amandate}
       DB_USER: ${DB_USER:-amandate}
@@ -54,7 +54,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DB_HOST: ${DB_HOST:-db}
+      DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
       DB_NAME: ${DB_NAME:-amandate}
       DB_USER: ${DB_USER:-amandate}

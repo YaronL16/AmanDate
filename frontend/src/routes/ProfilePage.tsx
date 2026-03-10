@@ -6,12 +6,18 @@ import { ApiError } from '../lib/api/client'
 import { createUser, findUserByChatId, getProfileOptions, updateUser } from '../lib/api/users'
 import type { ApiValidationError, UserCreatePayload, UserOut } from '../lib/api/types'
 
+type DiscoveryGender = 'male' | 'female'
+
 type FormState = {
   bio: string
   photo_urls: string[]
   age: number | null
   favorite_genres: string[]
   region: string | null
+  preferred_age_min: number | null
+  preferred_age_max: number | null
+  preferred_regions: string[]
+  preferred_genders: DiscoveryGender[]
   is_active: boolean
 }
 
@@ -21,6 +27,10 @@ const emptyForm: FormState = {
   age: null,
   favorite_genres: [],
   region: null,
+  preferred_age_min: null,
+  preferred_age_max: null,
+  preferred_regions: [],
+  preferred_genders: [],
   is_active: false,
 }
 
@@ -34,6 +44,10 @@ function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePay
     age: form.age,
     favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
     region: form.region,
+    preferred_age_min: form.preferred_age_min,
+    preferred_age_max: form.preferred_age_max,
+    preferred_regions: form.preferred_regions.length ? form.preferred_regions : null,
+    preferred_genders: form.preferred_genders.length ? form.preferred_genders : null,
     chat_id: identity.chat_id,
     is_active: form.is_active,
   }
@@ -46,6 +60,10 @@ function fromUser(user: UserOut): FormState {
     age: user.age ?? null,
     favorite_genres: user.favorite_genres ?? [],
     region: user.region ?? null,
+    preferred_age_min: user.preferred_age_min ?? null,
+    preferred_age_max: user.preferred_age_max ?? null,
+    preferred_regions: user.preferred_regions ?? [],
+    preferred_genders: user.preferred_genders ?? [],
     is_active: user.is_active,
   }
 }
@@ -72,7 +90,7 @@ function getApiErrorMessage(error: unknown): string {
 
 export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   const [backendUserId, setBackendUserId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'profile' | 'photos' | 'user-info'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'photos' | 'user-info'>('profile')
   const [form, setForm] = useState<FormState>(emptyForm)
   const [persistedIsActive, setPersistedIsActive] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -81,6 +99,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   const [optionsError, setOptionsError] = useState<string | null>(null)
   const [musicGenres, setMusicGenres] = useState<string[]>([])
   const [regions, setRegions] = useState<string[]>([])
+  const [discoveryGenders, setDiscoveryGenders] = useState<DiscoveryGender[]>([])
   const [showRequiredHints, setShowRequiredHints] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -134,6 +153,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       setOptionsError(null)
       setMusicGenres([])
       setRegions([])
+      setDiscoveryGenders([])
       return
     }
 
@@ -146,6 +166,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
         if (cancelled) return
         setMusicGenres(options.music_genres)
         setRegions(options.israel_regions)
+        setDiscoveryGenders(options.discovery_genders)
       })
       .catch(() => {
         if (cancelled) return
@@ -175,6 +196,36 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       return {
         ...current,
         favorite_genres: [...current.favorite_genres, genre],
+      }
+    })
+  }
+
+  const togglePreferredRegion = (region: string) => {
+    setForm((current) => {
+      if (current.preferred_regions.includes(region)) {
+        return {
+          ...current,
+          preferred_regions: current.preferred_regions.filter((item) => item !== region),
+        }
+      }
+      return {
+        ...current,
+        preferred_regions: [...current.preferred_regions, region],
+      }
+    })
+  }
+
+  const togglePreferredGender = (gender: DiscoveryGender) => {
+    setForm((current) => {
+      if (current.preferred_genders.includes(gender)) {
+        return {
+          ...current,
+          preferred_genders: current.preferred_genders.filter((item) => item !== gender),
+        }
+      }
+      return {
+        ...current,
+        preferred_genders: [...current.preferred_genders, gender],
       }
     })
   }
@@ -215,6 +266,14 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       setError('Please fill in both age and region before saving your account.')
       return
     }
+    if (
+      form.preferred_age_min !== null &&
+      form.preferred_age_max !== null &&
+      form.preferred_age_min > form.preferred_age_max
+    ) {
+      setError('Preferred minimum age must be less than or equal to preferred maximum age.')
+      return
+    }
     setShowRequiredHints(false)
 
     const enablingNow = !persistedIsActive && form.is_active
@@ -237,6 +296,10 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
           age: form.age,
           favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
           region: form.region,
+          preferred_age_min: form.preferred_age_min,
+          preferred_age_max: form.preferred_age_max,
+          preferred_regions: form.preferred_regions.length ? form.preferred_regions : null,
+          preferred_genders: form.preferred_genders.length ? form.preferred_genders : null,
           is_active: form.is_active,
         })
         : await createUser(toCreatePayload(form, activeUser))
@@ -337,6 +400,17 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
             }`}
           >
             Photos
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('preferences')}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              activeTab === 'preferences'
+                ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            Preferences
           </button>
           <button
             type="button"
@@ -511,6 +585,122 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               >
                 Add photo URL ({form.photo_urls.length}/5)
               </button>
+            </div>
+          </div>
+        ) : activeTab === 'preferences' ? (
+          <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+              Discovery preferences
+            </h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Configure who you want to discover. Leave fields empty for no restriction.
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+                    Preferred minimum age
+                  </span>
+                  <input
+                    type="number"
+                    min={18}
+                    max={120}
+                    className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                    value={form.preferred_age_min ?? ''}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        preferred_age_min: e.target.value === '' ? null : Number(e.target.value),
+                      }))
+                    }
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
+                    Preferred maximum age
+                  </span>
+                  <input
+                    type="number"
+                    min={18}
+                    max={120}
+                    className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                    value={form.preferred_age_max ?? ''}
+                    onChange={(e) =>
+                      setForm((current) => ({
+                        ...current,
+                        preferred_age_max: e.target.value === '' ? null : Number(e.target.value),
+                      }))
+                    }
+                  />
+                </label>
+              </div>
+
+              <div>
+                <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                  Preferred regions
+                </p>
+                {optionsLoading ? (
+                  <p className="text-xs text-[var(--text-secondary)]">Loading regions...</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {regions.map((region) => {
+                      const selected = form.preferred_regions.includes(region)
+                      return (
+                        <label
+                          key={`preferred-region-${region}`}
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                            selected
+                              ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
+                              : 'border-[var(--border-soft)] bg-[var(--surface-panel)]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => togglePreferredRegion(region)}
+                            className="h-4 w-4 accent-[var(--accent-primary)]"
+                          />
+                          <span>{region}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
+                  Preferred genders
+                </p>
+                {optionsLoading ? (
+                  <p className="text-xs text-[var(--text-secondary)]">Loading genders...</p>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {discoveryGenders.map((gender) => {
+                      const selected = form.preferred_genders.includes(gender)
+                      return (
+                        <label
+                          key={`preferred-gender-${gender}`}
+                          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                            selected
+                              ? 'border-[var(--accent-primary)] bg-[var(--accent-soft)]'
+                              : 'border-[var(--border-soft)] bg-[var(--surface-panel)]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={() => togglePreferredGender(gender)}
+                            className="h-4 w-4 accent-[var(--accent-primary)]"
+                          />
+                          <span className="capitalize">{gender}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : (

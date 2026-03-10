@@ -22,6 +22,12 @@ from .db import Base
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "(preferred_age_min IS NULL OR preferred_age_max IS NULL OR preferred_age_min <= preferred_age_max)",
+            name="ck_users_preferred_age_range",
+        ),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String, nullable=False)
@@ -33,6 +39,10 @@ class User(Base):
     age = Column(Integer, nullable=True)
     favorite_genres = Column(JSON, nullable=True)
     region = Column(String, nullable=True)
+    preferred_age_min = Column(Integer, nullable=True)
+    preferred_age_max = Column(Integer, nullable=True)
+    preferred_regions = Column(JSON, nullable=True)
+    preferred_genders = Column(JSON, nullable=True)
     is_active = Column(Boolean, nullable=False, default=True)
     last_active_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)

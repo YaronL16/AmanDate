@@ -33,8 +33,10 @@ def test_get_profile_options_200(client: TestClient):
     data = r.json()
     assert "music_genres" in data
     assert "israel_regions" in data
+    assert "discovery_genders" in data
     assert len(data["music_genres"]) > 0
     assert len(data["israel_regions"]) > 0
+    assert set(data["discovery_genders"]) == {"male", "female"}
 
 
 def test_create_user_201_with_profile_fields(client: TestClient):
@@ -53,6 +55,24 @@ def test_create_user_201_with_profile_fields(client: TestClient):
     assert data["photo_urls"] == ["https://example.com/p1.jpg", "https://example.com/p2.jpg"]
     assert data["favorite_genres"] == ["Pop", "Rock", "Jazz"]
     assert data["region"] == "Gush Dan"
+
+
+def test_create_user_201_with_discovery_preferences(client: TestClient):
+    payload = {
+        "name": "Preference User",
+        "chat_id": "U_PREF_1",
+        "preferred_age_min": 25,
+        "preferred_age_max": 35,
+        "preferred_regions": ["Gush Dan", "The Sharon", "Gush Dan"],
+        "preferred_genders": ["female", "male", "female"],
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 201
+    data = r.json()
+    assert data["preferred_age_min"] == 25
+    assert data["preferred_age_max"] == 35
+    assert data["preferred_regions"] == ["Gush Dan", "The Sharon"]
+    assert data["preferred_genders"] == ["female", "male"]
 
 
 def test_create_user_422_invalid_age(client: TestClient):
@@ -103,6 +123,37 @@ def test_create_user_422_more_than_5_photos(client: TestClient):
             "https://example.com/5.jpg",
             "https://example.com/6.jpg",
         ],
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_invalid_preferred_age_range(client: TestClient):
+    payload = {
+        "name": "Bad Preference Range",
+        "chat_id": "U_PREF_2",
+        "preferred_age_min": 40,
+        "preferred_age_max": 30,
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_invalid_preferred_region(client: TestClient):
+    payload = {
+        "name": "Bad Preferred Region",
+        "chat_id": "U_PREF_3",
+        "preferred_regions": ["Atlantis"],
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_invalid_preferred_gender(client: TestClient):
+    payload = {
+        "name": "Bad Preferred Gender",
+        "chat_id": "U_PREF_4",
+        "preferred_genders": ["non-binary"],
     }
     r = client.post("/api/users", json=payload)
     assert r.status_code == 422
@@ -181,6 +232,27 @@ def test_update_user_200_with_profile_fields(client: TestClient):
     assert data["age"] == 35
     assert data["favorite_genres"] == ["Electronic", "Rock"]
     assert data["region"] == "The Sharon"
+
+
+def test_update_user_200_with_discovery_preferences(client: TestClient):
+    create_r = client.post("/api/users", json={"name": "Pref Updater", "chat_id": "U_PREF_5"})
+    user_id = create_r.json()["id"]
+
+    r = client.put(
+        f"/api/users/{user_id}",
+        json={
+            "preferred_age_min": 27,
+            "preferred_age_max": 40,
+            "preferred_regions": ["The Negev", "Gush Dan", "The Negev"],
+            "preferred_genders": ["female", "female"],
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["preferred_age_min"] == 27
+    assert data["preferred_age_max"] == 40
+    assert data["preferred_regions"] == ["The Negev", "Gush Dan"]
+    assert data["preferred_genders"] == ["female"]
 
 
 def test_update_user_404(client: TestClient):
