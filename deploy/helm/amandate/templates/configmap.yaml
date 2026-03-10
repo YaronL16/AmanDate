@@ -6,6 +6,9 @@ metadata:
     {{- include "amandate.labels" . | nindent 4 }}
 data:
   APP_ENV: {{ .Values.config.appEnv | quote }}
+  DB_HOST: {{ include "amandate.cnpgRwServiceName" . | quote }}
+  DB_PORT: {{ .Values.database.port | quote }}
+  DB_NAME: {{ .Values.database.name | quote }}
   CHAT_DEEP_LINK_BASE_URL: {{ .Values.config.chatDeepLinkBaseUrl | quote }}
   ENABLE_ADMIN_VIEW: {{ .Values.config.enableAdminView | quote }}
   ADMIN_USER_ID: {{ .Values.config.adminUserId | quote }}

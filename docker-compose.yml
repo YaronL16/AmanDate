@@ -4,15 +4,15 @@ services:
     container_name: amandate_db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-amandate}
-      POSTGRES_USER: ${POSTGRES_USER:-amandate}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-amandate}
+      POSTGRES_DB: ${DB_NAME:-amandate}
+      POSTGRES_USER: ${DB_USER:-amandate}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-amandate}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - amandate-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-amandate} -d ${POSTGRES_DB:-amandate}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-amandate} -d ${DB_NAME:-amandate}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -27,7 +27,11 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-amandate}:${POSTGRES_PASSWORD:-amandate}@db:5432/${POSTGRES_DB:-amandate}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-amandate}
+      DB_USER: ${DB_USER:-amandate}
+      DB_PASSWORD: ${DB_PASSWORD:-amandate}
       APP_ENV: ${APP_ENV:-development}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       CHAT_DEEP_LINK_BASE_URL: ${CHAT_DEEP_LINK_BASE_URL:-https://chat.internal/users}
@@ -50,7 +54,11 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-amandate}:${POSTGRES_PASSWORD:-amandate}@db:5432/${POSTGRES_DB:-amandate}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-amandate}
+      DB_USER: ${DB_USER:-amandate}
+      DB_PASSWORD: ${DB_PASSWORD:-amandate}
     working_dir: /app
 
   frontend:

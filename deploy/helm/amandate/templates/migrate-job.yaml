@@ -42,7 +42,5 @@ spec:
                 secretKeyRef:
                   name: application-secret
                   key: password
-            - name: DATABASE_URL
-              value: postgresql+psycopg2://$(DB_USER):$(DB_PASSWORD)@{{ include "amandate.cnpgRwServiceName" . }}:{{ .Values.database.port }}/{{ .Values.database.name }}
           resources:
             {{- toYaml .Values.migration.resources | nindent 12 }}
