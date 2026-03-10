@@ -65,17 +65,9 @@ Component specific names.
 {{- printf "%s-config" (include "amandate.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "amandate.applicationSecretName" -}}
-{{- printf "%s-application-secret" (include "amandate.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{- define "amandate.dbAdminSecretName" -}}
-{{- printf "%s-db-admin-secret" (include "amandate.fullname" .) | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
 {{- define "amandate.cnpgClusterName" -}}
-{{- if .Values.cnpg.clusterName -}}
-{{- .Values.cnpg.clusterName -}}
+{{- if .Values.database.cnpg.clusterName -}}
+{{- .Values.database.cnpg.clusterName -}}
 {{- else -}}
 {{- printf "%s-db" (include "amandate.fullname" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}

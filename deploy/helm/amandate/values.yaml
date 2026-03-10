@@ -26,27 +26,30 @@ ingress:
         - path: /
           pathType: Prefix
   tls: []
+# Vault Secrets
+vaultStaticSecret:
+  # Requires Vault Secrets Operator + VaultAuth in the target namespace.
+  vaultAuthRef: vault-resources/yaron-vaultauth
+  mount: kv/developers
+  applicationSecret:
+    path: yaron/amandate/db-app-secret
+  dbAdminSecret:
+    path: yaron/amandate/db-admin-secret
+# CloudNative PostgreSQL
 database:
   name: amandate
   port: 5432
   appUser: amandate
   superuser: postgres
-vaultStaticSecret:
-  # Requires Vault Secrets Operator + VaultAuth in the target namespace.
-  vaultAuthRef: vault-resources/yaron-vaultauth
-  mount: secret
-  applicationSecret:
-    path: amandate/database/app
-  dbAdminSecret:
-    path: amandate/database/superuser
-cnpg:
-  clusterName: ""
-  instances: 1
-  storage:
-    size: 5Gi
-    storageClass: standard
-  resources: {}
-  parameters: {}
+  cnpg:
+    clusterName: ""
+    instances: 1
+    storage:
+      size: 5Gi
+      storageClass: standard
+    resources: {}
+    parameters: {}
+# App schema migration job
 migration:
   hookDeletePolicy: before-hook-creation,hook-succeeded
   backoffLimit: 3

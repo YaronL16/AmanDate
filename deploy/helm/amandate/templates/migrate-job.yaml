@@ -35,12 +35,12 @@ spec:
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "amandate.applicationSecretName" . }}
+                  name: application-secret
                   key: username
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "amandate.applicationSecretName" . }}
+                  name: application-secret
                   key: password
             - name: DATABASE_URL
               value: postgresql+psycopg2://$(DB_USER):$(DB_PASSWORD)@{{ include "amandate.cnpgRwServiceName" . }}:{{ .Values.database.port }}/{{ .Values.database.name }}
