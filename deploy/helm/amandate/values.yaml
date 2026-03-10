@@ -4,7 +4,7 @@ commonLabels: {}
 global:
   imageRepository: ghcr.io/yaronl16
   imagePullPolicy: IfNotPresent
-  imageTag: "0.1.6"
+  imageTag: "0.1.8"
 config:
   appEnv: development
   chatDeepLinkBaseUrl: https://chat.internal/users
