@@ -40,7 +40,7 @@ def test_swipe_right_no_reciprocal_200_not_matched(client: TestClient):
 
 def test_swipe_right_reciprocal_200_matched(client: TestClient):
     api_swipes.settings.chat_deep_link_base_url = "https://chat.internal/users"
-    a = client.post("/api/users", json={"name": "Alice", "chat_id": "U24", "photo_url": "https://a.jpg"})
+    a = client.post("/api/users", json={"name": "Alice", "chat_id": "U24", "photo_urls": ["https://a.jpg"]})
     b = client.post("/api/users", json={"name": "Bob", "chat_id": "U25", "department": "Eng"})
     alice_id = a.json()["id"]
     bob_id = b.json()["id"]

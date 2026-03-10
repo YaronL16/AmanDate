@@ -11,7 +11,7 @@ vi.mock('../lib/api/users', () => ({
 }))
 
 describe('ProfilePage', () => {
-  it('enforces max 3 genres and submits selected profile fields', async () => {
+  it('enforces max 3 genres, supports photos tab, and submits selected profile fields', async () => {
     const { createUser, findUserByChatId, getProfileOptions } = await import('../lib/api/users')
 
     vi.mocked(findUserByChatId).mockResolvedValue(null)
@@ -23,7 +23,7 @@ describe('ProfilePage', () => {
       id: 'user-1',
       name: 'Alice',
       bio: null,
-      photo_url: null,
+      photo_urls: null,
       department: 'Eng',
       gender: 'female',
       age: 28,
@@ -59,6 +59,17 @@ describe('ProfilePage', () => {
 
     fireEvent.change(screen.getByLabelText('Age'), { target: { value: '28' } })
     fireEvent.change(screen.getByLabelText('Region'), { target: { value: 'Center' } })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Photos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add photo URL (1/5)' }))
+    fireEvent.change(screen.getByPlaceholderText('Photo URL #1'), {
+      target: { value: 'https://example.com/one.jpg' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('Photo URL #2'), {
+      target: { value: 'https://example.com/two.jpg' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Profile' }))
+
     fireEvent.click(screen.getByRole('button', { name: 'Save profile' }))
 
     await waitFor(() => {
@@ -70,6 +81,7 @@ describe('ProfilePage', () => {
       age: 28,
       region: 'Center',
       favorite_genres: ['Pop', 'Rock', 'Jazz'],
+      photo_urls: ['https://example.com/one.jpg', 'https://example.com/two.jpg'],
     })
   })
 })

@@ -36,7 +36,7 @@ def test_discovery_200_returns_candidates(client: TestClient):
     assert data[0]["name"] == "Bob"
     assert data[0]["department"] == "Eng"
     assert "id" in data[0]
-    assert "photo_url" in data[0]
+    assert "photo_urls" in data[0]
 
 
 def test_discovery_excludes_requester(client: TestClient):

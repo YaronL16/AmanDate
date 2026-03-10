@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "amandate.fullname" . }}-migrate
+  labels:
+    {{- include "amandate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migration
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: {{ .Values.migration.hookDeletePolicy }}
+spec:
+  backoffLimit: {{ .Values.migration.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.migration.ttlSecondsAfterFinished }}
+  template:
+    metadata:
+      labels:
+        {{- include "amandate.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migration
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.global.imageRepository }}/amandate-backend:{{ .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - alembic upgrade head
+          envFrom:
+            - configMapRef:
+                name: {{ include "amandate.configmapName" . }}
+          env:
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "amandate.applicationSecretName" . }}
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "amandate.applicationSecretName" . }}
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql+psycopg2://$(DB_USER):$(DB_PASSWORD)@{{ include "amandate.cnpgRwServiceName" . }}:{{ .Values.database.port }}/{{ .Values.database.name }}
+          resources:
+            {{- toYaml .Values.migration.resources | nindent 12 }}

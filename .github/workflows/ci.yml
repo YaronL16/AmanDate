@@ -157,8 +157,8 @@ jobs:
         cache-from: type=gha,scope=frontend-release
         cache-to: type=gha,mode=max,scope=frontend-release
 
-  create-git-tag:
-    name: Create git tag for release version
+  update-helm-image-tag:
+    name: Update Helm imageTag from release version
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
@@ -170,6 +170,39 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
+    - name: Update chart values imageTag
+      uses: mikefarah/yq@v4.44.6
+      env:
+        VERSION: ${{ needs.version.outputs.value }}
+      with:
+        cmd: yq '.global.imageTag = strenv(VERSION)' -i deploy/helm/amandate/values.yaml
+
+    - name: Commit and push values update
+      env:
+        VERSION: ${{ needs.version.outputs.value }}
+      run: |
+        if git diff --quiet -- deploy/helm/amandate/values.yaml; then
+          echo "Helm imageTag already set to $VERSION."
+          exit 0
+        fi
+        git add deploy/helm/amandate/values.yaml
+        git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "chore(release): set helm imageTag to $VERSION [skip ci]"
+        git push origin HEAD:main
+
+  create-git-tag:
+    name: Create git tag for release version
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+    - version
+    - update-helm-image-tag
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        ref: main
 
     - name: Create and push tag
       env:

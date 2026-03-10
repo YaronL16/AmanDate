@@ -8,7 +8,7 @@ import type { ApiValidationError, UserCreatePayload, UserOut } from '../lib/api/
 
 type FormState = {
   bio: string
-  photo_url: string
+  photo_urls: string[]
   age: number | null
   favorite_genres: string[]
   region: string | null
@@ -17,7 +17,7 @@ type FormState = {
 
 const emptyForm: FormState = {
   bio: '',
-  photo_url: '',
+  photo_urls: [''],
   age: null,
   favorite_genres: [],
   region: null,
@@ -28,7 +28,7 @@ function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePay
   return {
     name: identity.name,
     bio: form.bio.trim() || null,
-    photo_url: form.photo_url.trim() || null,
+    photo_urls: form.photo_urls.map((url) => url.trim()).filter(Boolean),
     department: identity.department,
     gender: identity.gender,
     age: form.age,
@@ -42,7 +42,7 @@ function toCreatePayload(form: FormState, identity: MockAuthUser): UserCreatePay
 function fromUser(user: UserOut): FormState {
   return {
     bio: user.bio ?? '',
-    photo_url: user.photo_url ?? '',
+    photo_urls: user.photo_urls?.length ? user.photo_urls : [''],
     age: user.age ?? null,
     favorite_genres: user.favorite_genres ?? [],
     region: user.region ?? null,
@@ -72,7 +72,7 @@ function getApiErrorMessage(error: unknown): string {
 
 export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   const [backendUserId, setBackendUserId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'profile' | 'user-info'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'photos' | 'user-info'>('profile')
   const [form, setForm] = useState<FormState>(emptyForm)
   const [persistedIsActive, setPersistedIsActive] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -81,6 +81,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   const [optionsError, setOptionsError] = useState<string | null>(null)
   const [musicGenres, setMusicGenres] = useState<string[]>([])
   const [regions, setRegions] = useState<string[]>([])
+  const [showRequiredHints, setShowRequiredHints] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const firstName = activeUser?.name.trim().split(/\s+/)[0] ?? ''
@@ -178,6 +179,27 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     })
   }
 
+  const setPhotoAt = (index: number, value: string) => {
+    setForm((current) => ({
+      ...current,
+      photo_urls: current.photo_urls.map((url, i) => (i === index ? value : url)),
+    }))
+  }
+
+  const addPhotoField = () => {
+    setForm((current) => {
+      if (current.photo_urls.length >= 5) return current
+      return { ...current, photo_urls: [...current.photo_urls, ''] }
+    })
+  }
+
+  const removePhotoField = (index: number) => {
+    setForm((current) => {
+      const updated = current.photo_urls.filter((_, i) => i !== index)
+      return { ...current, photo_urls: updated.length ? updated : [''] }
+    })
+  }
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!activeUser) {
@@ -187,6 +209,13 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
 
     setError(null)
     setSuccess(null)
+    setShowRequiredHints(true)
+
+    if (form.age === null || !form.region) {
+      setError('Please fill in both age and region before saving your account.')
+      return
+    }
+    setShowRequiredHints(false)
 
     const enablingNow = !persistedIsActive && form.is_active
     if (enablingNow) {
@@ -204,7 +233,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       const user = backendUserId
         ? await updateUser(backendUserId, {
           bio: form.bio.trim() || null,
-          photo_url: form.photo_url.trim() || null,
+          photo_urls: form.photo_urls.map((url) => url.trim()).filter(Boolean),
           age: form.age,
           favorite_genres: form.favorite_genres.length ? form.favorite_genres : null,
           region: form.region,
@@ -246,7 +275,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     <section className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Profile - {firstName}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{firstName}</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
             {backendUserId ? 'Editing saved profile' : 'New profile setup'}
           </p>
@@ -300,6 +329,17 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('photos')}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+              activeTab === 'photos'
+                ? 'bg-[var(--accent-primary)] text-white shadow-sm'
+                : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            Photos
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('user-info')}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
               activeTab === 'user-info'
@@ -342,7 +382,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                   type="number"
                   min={18}
                   max={120}
-                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && form.age === null ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
                   value={form.age ?? ''}
                   onChange={(e) =>
                     setForm((current) => ({
@@ -351,6 +391,9 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                     }))
                   }
                 />
+                {showRequiredHints && form.age === null ? (
+                  <p className="mt-1 text-xs text-red-600">Age is required.</p>
+                ) : null}
               </label>
 
               <div>
@@ -394,7 +437,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Region</span>
                 <select
-                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                  className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && !form.region ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
                   value={form.region ?? ''}
                   onChange={(e) =>
                     setForm((current) => ({
@@ -410,15 +453,9 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                     </option>
                   ))}
                 </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Photo URL</span>
-                <input
-                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                  value={form.photo_url}
-                  onChange={(e) => setForm((current) => ({ ...current, photo_url: e.target.value }))}
-                />
+                {showRequiredHints && !form.region ? (
+                  <p className="mt-1 text-xs text-red-600">Region is required.</p>
+                ) : null}
               </label>
 
               <label className="block">
@@ -429,6 +466,51 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                   onChange={(e) => setForm((current) => ({ ...current, bio: e.target.value }))}
                 />
               </label>
+            </div>
+          </div>
+        ) : activeTab === 'photos' ? (
+          <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
+            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">Photos</h3>
+            <p className="mt-1 text-xs text-[var(--text-secondary)]">
+              Add up to 5 photo URLs. Discovery cards will display them as a carousel.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              {form.photo_urls.map((photoUrl, index) => (
+                <div key={`photo-${index}`} className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] p-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
+                      placeholder={`Photo URL #${index + 1}`}
+                      value={photoUrl}
+                      onChange={(e) => setPhotoAt(index, e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhotoField(index)}
+                      disabled={form.photo_urls.length === 1}
+                      className="rounded-lg border border-[var(--border-soft)] px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  {photoUrl.trim() ? (
+                    <img
+                      src={photoUrl.trim()}
+                      alt={`Preview ${index + 1}`}
+                      className="mt-3 w-full rounded-xl border border-[var(--border-soft)] object-contain"
+                    />
+                  ) : null}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addPhotoField}
+                disabled={form.photo_urls.length >= 5}
+                className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                Add photo URL ({form.photo_urls.length}/5)
+              </button>
             </div>
           </div>
         ) : (
@@ -488,7 +570,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
           </div>
         )}
 
-        {activeTab === 'profile' ? (
+        {activeTab !== 'user-info' ? (
           <button
             type="submit"
             className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"

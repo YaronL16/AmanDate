@@ -34,7 +34,7 @@ High level: a user authenticates via a trusted internal mechanism, creates or up
   - Authentication implementation details (SSO provider, reverse proxy, etc.) remain infrastructure concerns and are out of scope for this PRD.
 - **Onboarding & Profile Management**
   - User identity fields (`name`, `department`, `gender`, `chat_id`) come from IDP in production, and from the MVP dataset in testing mode.
-- In MVP, profile editing is limited to non-identity fields (`bio`, `photo_url`, `age`, `favorite_genres`, `region`); identity fields are shown as read-only.
+- In MVP, profile editing is limited to non-identity fields (`bio`, `photo_urls`, `age`, `favorite_genres`, `region`); identity fields are shown as read-only.
   - Users must explicitly enable their account from profile before they can swipe or appear in discovery.
   - Enablement is controlled by `is_active` and must require both a checkbox and user confirmation in profile UX.
   - When not enabled (`is_active = false`), the user cannot swipe and is hidden from discovery.
@@ -73,7 +73,7 @@ users table:
 - id (UUID, primary key)
 - name (String, required)
 - bio (Text)
-- photo_url (String)
+- photo_urls (Array/JSON of String, nullable, up to 5 URLs)
 - age (Integer, nullable, expected range 18-120)
 - favorite_genres (Array/JSON of String, nullable, max 3 entries)
 - region (String, nullable, one value from the maintained Israel regions list)
@@ -128,7 +128,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
 - `POST /api/users`
   - **Description**: Create a new user profile.
   - **Request body** (Pydantic `UserCreate`):
-    - `name`, `bio`, `photo_url`, `age`, `favorite_genres`, `region`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
+    - `name`, `bio`, `photo_urls`, `age`, `favorite_genres`, `region`, `department` (optional), `gender` (optional but expected from trusted identity source), `chat_id` (required).
   - **Responses**:
     - `201 Created` with the created `User` object.
     - `400 Bad Request` for validation errors (e.g., missing `chat_id`).
@@ -140,7 +140,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - `404 Not Found` if the user does not exist.
 - `PUT /api/users/{user_id}`
   - **Description**: Update an existing user profile.
-  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_url`, `age`, `favorite_genres`, `region`, `department`, `gender`, `chat_id`.
+  - **Request body** (Pydantic `UserUpdate`): partial updates for `name`, `bio`, `photo_urls`, `age`, `favorite_genres`, `region`, `department`, `gender`, `chat_id`.
 - `GET /api/users/options`
   - **Description**: Return backend-maintained choice lists for profile fields.
   - **Responses**:
@@ -165,7 +165,7 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
     - Exclude users already swiped on by the requester.
     - Exclude users with `is_active = false` (not enabled) or missing `chat_id`.
   - **Responses**:
-    - `200 OK` with a list of lightweight user cards (id, name, department, photo_url).
+    - `200 OK` with a list of lightweight user cards (id, name, age, region, favorite_genres, bio, photo_urls).
     - `200 OK` with an empty list when there are no more candidates.
 - `POST /api/swipe`
   - **Description**: Record a swipe and optionally create a match.
@@ -179,14 +179,14 @@ All endpoints are JSON-based and are expected to be called from a trusted intern
   - **Responses** (Pydantic `SwipeResult`):
     - `200 OK` with:
       - `matched: false` if no mutual match yet.
-      - `matched: true` plus `match` object and minimal data about the other user (name, photo_url, `chat_id`) if a new or existing match is present.
+      - `matched: true` plus `match` object and minimal data about the other user (name, photo_urls, `chat_id`) if a new or existing match is present.
     - `400 Bad Request` for invalid direction or invalid IDs.
     - `404 Not Found` if either user does not exist.
 - `GET /api/matches/{user_id}`
   - **Description**: Return all matches for a user.
   - **Behavior**:
     - Return a list of matches sorted by `created_at` descending.
-    - For each match, include the other user's minimal profile (id, name, department, photo_url, `chat_id`) to construct deep links.
+    - For each match, include the other user's minimal profile (id, name, department, photo_urls, `chat_id`) to construct deep links.
   - **Responses**:
     - `200 OK` with a list of match records (possibly empty).
     - `404 Not Found` only if the user does not exist.
@@ -197,12 +197,16 @@ Cursor should utilize the `npx shadcn-ui@latest add [component]` command to gene
 - **Onboarding / Profile page**
   - Layout: centered `Card` containing a form for identity fields (`name`, `department`, `gender`, `chat_id`) plus editable profile fields.
   - Information architecture: split into separate tabs for read-only `My account` and editable `Profile`.
-  - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for `region`), checkbox group/multi-select (for `favorite_genres`), `Button`, `Avatar` preview.
+  - Add a dedicated `Photos` tab for managing up to 5 photo URLs with preview.
+  - Components: `Card`, `CardHeader`, `CardContent`, `Input`, `Textarea`, `Select` (for `region`), checkbox group/multi-select (for `favorite_genres`), photo URL list inputs (max 5) with add/remove, `Button`, `Avatar` preview.
   - Behavior: client-side validation, inline error messages, disabled state while submitting, success `Toast` on save.
   - Include an account enablement checkbox with explicit confirmation; only enabled users may swipe and be discoverable.
 - **Home page (Swipe Discovery)**
   - Layout: main `Card` stack in the center with explicit Pass/Like buttons beneath; optional sidebar showing condensed matches list on desktop.
-  - Components: `Card`, `CardContent`, `Button` (X / Heart icons via Lucide), Framer Motion for drag gestures (`drag`, `dragConstraints`, `dragElastic`, `onDragEnd`).
+  - Discovery card media area supports a photo carousel (next/prev controls).
+  - Card overlay shows bottom-left: first name and `age - region`; bottom-right: expand icon.
+  - Expand action reveals full user-editable profile details below photos (name, bio, age, region, favorite genres).
+  - Components: `Card`, `CardContent`, `Button` (X / Heart icons via Lucide), Framer Motion for drag gestures (`drag`, `dragConstraints`, `dragElastic`, `onDragEnd`) and animated transitions.
   - States:
     - Loading state: skeleton or spinner while fetching discovery candidates.
     - Empty state: illustration/text when there are no more profiles to swipe.
@@ -242,7 +246,7 @@ Phase 3: Frontend scaffolding & API integration
 - Set up routing (e.g., `react-router`) for Home (Swipe), Profile, and Matches views.
 - Implement an API client layer (e.g., using `fetch` or Axios) with typed response models.
 - Add MVP mock auth flow with a predefined user dataset, login by `user_id`, and logout.
-- Build the user profile form and wire it to the`/api/users` endpoints, with read-only identity fields (`name`, `department`, `chat_id`) and editable non-identity fields (`bio`, `photo_url`).
+- Build the user profile form and wire it to the`/api/users` endpoints, with read-only identity fields (`name`, `department`, `chat_id`) and editable non-identity fields (`bio`, `photo_urls`, `age`, `favorite_genres`, `region`).
 - **Acceptance criteria**: A tester can login/logout by `user_id`, load the app as that user, update allowed profile fields via the UI, and see persisted changes after refresh.
 
 Phase 4: Swipe UI

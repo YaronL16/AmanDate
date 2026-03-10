@@ -9,16 +9,16 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --surface-bg: #f5fbfb;
-  --surface-panel: #ffffff;
-  --surface-panel-soft: #f2f8f8;
-  --text-primary: #12343b;
-  --text-secondary: #43646b;
-  --accent-primary: #2aa7a0;
-  --accent-primary-strong: #218b86;
-  --accent-soft: #d7f0ee;
-  --border-soft: #d8e7e8;
-  --focus-ring: #63c6c1;
+  --surface-bg: #eef4f5;
+  --surface-panel: #f8fbfb;
+  --surface-panel-soft: #f1f6f7;
+  --text-primary: #1c353b;
+  --text-secondary: #567179;
+  --accent-primary: #2f9f99;
+  --accent-primary-strong: #277f7a;
+  --accent-soft: #cfe5e4;
+  --border-soft: #cfdedf;
+  --focus-ring: #68b7b2;
 }
 
 :root.dark {
@@ -42,8 +42,8 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(42, 167, 160, 0.12), transparent 35%),
-    radial-gradient(circle at 100% 100%, rgba(42, 167, 160, 0.08), transparent 40%),
+    radial-gradient(circle at 0% 0%, rgba(47, 159, 153, 0.08), transparent 36%),
+    radial-gradient(circle at 100% 100%, rgba(47, 159, 153, 0.05), transparent 42%),
     var(--surface-bg);
   color: var(--text-primary);
   transition: background-color 200ms ease, color 200ms ease;

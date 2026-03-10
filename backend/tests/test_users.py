@@ -10,7 +10,7 @@ def test_create_user_201(client: TestClient):
     payload = {
         "name": "Alice",
         "bio": "Hello world",
-        "photo_url": "https://example.com/alice.jpg",
+        "photo_urls": ["https://example.com/alice.jpg"],
         "department": "Eng",
         "chat_id": "U001",
     }
@@ -19,7 +19,7 @@ def test_create_user_201(client: TestClient):
     data = r.json()
     assert data["name"] == "Alice"
     assert data["bio"] == "Hello world"
-    assert data["photo_url"] == payload["photo_url"]
+    assert data["photo_urls"] == payload["photo_urls"]
     assert data["department"] == "Eng"
     assert data["chat_id"] == "U001"
     assert data["is_active"] is True
@@ -42,6 +42,7 @@ def test_create_user_201_with_profile_fields(client: TestClient):
         "name": "Profile User",
         "chat_id": "U_PROFILE_1",
         "age": 29,
+        "photo_urls": ["https://example.com/p1.jpg", "https://example.com/p2.jpg"],
         "favorite_genres": ["Pop", "Rock", "Jazz"],
         "region": "Gush Dan",
     }
@@ -49,6 +50,7 @@ def test_create_user_201_with_profile_fields(client: TestClient):
     assert r.status_code == 201
     data = r.json()
     assert data["age"] == 29
+    assert data["photo_urls"] == ["https://example.com/p1.jpg", "https://example.com/p2.jpg"]
     assert data["favorite_genres"] == ["Pop", "Rock", "Jazz"]
     assert data["region"] == "Gush Dan"
 
@@ -84,6 +86,23 @@ def test_create_user_422_invalid_region(client: TestClient):
         "name": "Invalid Region",
         "chat_id": "U_PROFILE_5",
         "region": "Atlantis",
+    }
+    r = client.post("/api/users", json=payload)
+    assert r.status_code == 422
+
+
+def test_create_user_422_more_than_5_photos(client: TestClient):
+    payload = {
+        "name": "Too Many Photos",
+        "chat_id": "U_PROFILE_5B",
+        "photo_urls": [
+            "https://example.com/1.jpg",
+            "https://example.com/2.jpg",
+            "https://example.com/3.jpg",
+            "https://example.com/4.jpg",
+            "https://example.com/5.jpg",
+            "https://example.com/6.jpg",
+        ],
     }
     r = client.post("/api/users", json=payload)
     assert r.status_code == 422

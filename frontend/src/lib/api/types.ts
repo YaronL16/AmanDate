@@ -2,7 +2,7 @@ export interface UserOut {
   id: string
   name: string
   bio: string | null
-  photo_url: string | null
+  photo_urls: string[] | null
   department: string | null
   gender: 'male' | 'female' | null
   age: number | null
@@ -16,15 +16,19 @@ export interface UserOut {
 export interface UserCard {
   id: string
   name: string
+  bio: string | null
+  age: number | null
+  region: string | null
+  favorite_genres: string[] | null
   department: string | null
   gender: 'male' | 'female' | null
-  photo_url: string | null
+  photo_urls: string[] | null
 }
 
 export interface UserCreatePayload {
   name: string
   bio?: string | null
-  photo_url?: string | null
+  photo_urls?: string[] | null
   department?: string | null
   gender?: 'male' | 'female' | null
   age?: number | null
@@ -37,7 +41,7 @@ export interface UserCreatePayload {
 export interface UserUpdatePayload {
   name?: string
   bio?: string | null
-  photo_url?: string | null
+  photo_urls?: string[] | null
   department?: string | null
   gender?: 'male' | 'female' | null
   age?: number | null
@@ -64,7 +68,7 @@ export interface MatchUser {
   id: string
   name: string
   department: string | null
-  photo_url: string | null
+  photo_urls: string[] | null
   chat_id: string
 }
 

@@ -1,0 +1,13 @@
+1. Get frontend URL:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+
+2. Backend service DNS:
+  {{ include "amandate.backend.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:8000
+
+3. CloudNativePG read-write endpoint:
+  {{ include "amandate.cnpgRwServiceName" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.database.port }}
+
+4. Vault prerequisites:
+  Ensure Vault Secrets Operator is installed and a VaultAuth named {{ .Values.vaultStaticSecret.vaultAuthRef }} exists in namespace {{ .Release.Namespace }}.

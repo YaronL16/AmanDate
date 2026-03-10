@@ -10,7 +10,7 @@ from .profile_options import ISRAEL_REGIONS, MUSIC_GENRES
 class UserBase(BaseModel):
     name: str = Field(..., min_length=1)
     bio: Optional[str] = None
-    photo_url: Optional[str] = None
+    photo_urls: Optional[list[str]] = None
     department: Optional[str] = None
     chat_id: str = Field(..., min_length=1)
     gender: Optional[Literal["male", "female"]] = None
@@ -32,6 +32,18 @@ class UserBase(BaseModel):
             raise ValueError(f"Invalid favorite genre(s): {', '.join(invalid)}.")
         return value
 
+    @field_validator("photo_urls")
+    @classmethod
+    def validate_photo_urls(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        if value is None:
+            return value
+        if len(value) > 5:
+            raise ValueError("photo_urls can include at most 5 URLs.")
+        cleaned = [url.strip() for url in value]
+        if any(not url for url in cleaned):
+            raise ValueError("photo_urls cannot contain empty values.")
+        return cleaned
+
     @field_validator("region")
     @classmethod
     def validate_region(cls, value: Optional[str]) -> Optional[str]:
@@ -49,7 +61,7 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1)
     bio: Optional[str] = None
-    photo_url: Optional[str] = None
+    photo_urls: Optional[list[str]] = None
     department: Optional[str] = None
     chat_id: Optional[str] = Field(None, min_length=1)
     gender: Optional[Literal["male", "female"]] = None
@@ -72,6 +84,18 @@ class UserUpdate(BaseModel):
             raise ValueError(f"Invalid favorite genre(s): {', '.join(invalid)}.")
         return value
 
+    @field_validator("photo_urls")
+    @classmethod
+    def validate_photo_urls(cls, value: Optional[list[str]]) -> Optional[list[str]]:
+        if value is None:
+            return value
+        if len(value) > 5:
+            raise ValueError("photo_urls can include at most 5 URLs.")
+        cleaned = [url.strip() for url in value]
+        if any(not url for url in cleaned):
+            raise ValueError("photo_urls cannot contain empty values.")
+        return cleaned
+
     @field_validator("region")
     @classmethod
     def validate_region(cls, value: Optional[str]) -> Optional[str]:
@@ -86,7 +110,7 @@ class UserOut(BaseModel):
     id: UUID
     name: str
     bio: Optional[str]
-    photo_url: Optional[str]
+    photo_urls: Optional[list[str]]
     department: Optional[str]
     chat_id: str
     gender: Optional[Literal["male", "female"]]
@@ -102,8 +126,12 @@ class UserOut(BaseModel):
 class UserCard(BaseModel):
     id: UUID
     name: str
+    bio: Optional[str]
+    age: Optional[int]
+    region: Optional[str]
+    favorite_genres: Optional[list[str]]
     department: Optional[str]
-    photo_url: Optional[str]
+    photo_urls: Optional[list[str]]
     gender: Optional[Literal["male", "female"]]
 
     model_config = ConfigDict(from_attributes=True)
@@ -119,7 +147,7 @@ class MatchUser(BaseModel):
     id: UUID
     name: str
     department: Optional[str]
-    photo_url: Optional[str]
+    photo_urls: Optional[list[str]]
     chat_id: str
 
     model_config = ConfigDict(from_attributes=True)

@@ -26,7 +26,7 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name = Column(String, nullable=False)
     bio = Column(Text, nullable=True)
-    photo_url = Column(String, nullable=True)
+    photo_urls = Column(JSON, nullable=True)
     chat_id = Column(String, nullable=False, unique=True)
     department = Column(String, nullable=True)
     gender = Column(Enum("male", "female", name="user_gender"), nullable=True)

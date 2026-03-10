@@ -1,0 +1,25 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "amandate.cnpgClusterName" . }}
+  labels:
+    {{- include "amandate.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database
+spec:
+  instances: {{ .Values.cnpg.instances }}
+  superuserSecret:
+    name: {{ include "amandate.dbAdminSecretName" . }}
+  bootstrap:
+    initdb:
+      database: {{ .Values.database.name | quote }}
+      owner: {{ .Values.database.appUser | quote }}
+      secret:
+        name: {{ include "amandate.applicationSecretName" . }}
+  storage:
+    size: {{ .Values.cnpg.storage.size | quote }}
+    storageClass: {{ .Values.cnpg.storage.storageClass | quote }}
+  resources:
+    {{- toYaml .Values.cnpg.resources | nindent 4 }}
+  postgresql:
+    parameters:
+      {{- toYaml .Values.cnpg.parameters | nindent 6 }}

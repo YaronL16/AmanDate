@@ -1,0 +1,64 @@
+nameOverride: ""
+fullnameOverride: ""
+
+commonLabels: {}
+
+global:
+  imageRepository: ghcr.io/yaronl16
+  imagePullPolicy: IfNotPresent
+  imageTag: "v0.1.1"
+
+config:
+  appEnv: development
+  chatDeepLinkBaseUrl: https://chat.internal/users
+  enableAdminView: "false"
+  adminUserId: ""
+
+backend:
+  replicaCount: 1
+  extraEnv: {}
+  resources: {}
+
+frontend:
+  replicaCount: 1
+  resources: {}
+
+ingress:
+  className: nginx
+  annotations: {}
+  hosts:
+  - host: amandate.local
+    paths:
+    - path: /
+      pathType: Prefix
+  tls: []
+
+database:
+  name: amandate
+  port: 5432
+  appUser: amandate
+  superuser: postgres
+
+vaultStaticSecret:
+  # Requires Vault Secrets Operator + VaultAuth in the target namespace.
+  vaultAuthRef: default
+  mount: secret
+  applicationSecret:
+    path: amandate/database/app
+  dbAdminSecret:
+    path: amandate/database/superuser
+
+cnpg:
+  clusterName: ""
+  instances: 1
+  storage:
+    size: 5Gi
+    storageClass: standard
+  resources: {}
+  parameters: {}
+
+migration:
+  hookDeletePolicy: before-hook-creation,hook-succeeded
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 300
+  resources: {}

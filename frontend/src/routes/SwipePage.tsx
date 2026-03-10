@@ -43,6 +43,8 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   const [backendUserId, setBackendUserId] = useState<string | null>(null)
   const [isEnabled, setIsEnabled] = useState(false)
   const [cards, setCards] = useState<UserCard[]>([])
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const [isExpanded, setIsExpanded] = useState(false)
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -53,6 +55,8 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   const topCard = cards[0] ?? null
   const nextCard = cards[1] ?? null
   const hasUser = Boolean(activeUser)
+  const topPhotos = topCard?.photo_urls ?? []
+  const activePhotoUrl = topPhotos[photoIndex] ?? null
 
   const fetchCandidates = useCallback(
     async (requestedOffset: number, reset: boolean) => {
@@ -95,7 +99,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
             gender: activeUser.gender,
             chat_id: activeUser.chat_id,
             bio: null,
-            photo_url: null,
+            photo_urls: [],
             is_active: false,
           })
         }
@@ -162,6 +166,11 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   useEffect(() => {
     void maybeBackfill()
   }, [cards.length, maybeBackfill])
+
+  useEffect(() => {
+    setPhotoIndex(0)
+    setIsExpanded(false)
+  }, [topCard?.id])
 
   const onRetry = () => {
     if (!backendUserId) return
@@ -231,23 +240,27 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
         </div>
       ) : topCard ? (
         <div>
-          <div className="relative mx-auto h-[420px] w-full max-w-md">
-            {nextCard && (
+          <div className={`relative mx-auto w-full max-w-md ${isExpanded ? '' : 'h-[420px]'}`}>
+            {nextCard && !isExpanded ? (
               <div className="absolute inset-x-4 top-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-6 opacity-65">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
                   Up next
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">
-                  {getFirstName(nextCard.name)}
-                </h3>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{getFirstName(nextCard.name)}</h3>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                  {nextCard.department ?? 'No department provided'}
+                  {nextCard.age && nextCard.region
+                    ? `${nextCard.age} - ${nextCard.region}`
+                    : nextCard.region ?? nextCard.department ?? 'No additional details'}
                 </p>
               </div>
-            )}
+            ) : null}
 
             <motion.div
-              className="absolute inset-0 cursor-grab rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-6 shadow-[0_16px_34px_rgba(16,49,54,0.18)] active:cursor-grabbing"
+              className={`relative cursor-grab rounded-2xl border border-[var(--border-soft)] p-6 shadow-[0_16px_34px_rgba(16,49,54,0.18)] active:cursor-grabbing ${isExpanded ? '' : 'h-[420px]'}`}
+              style={{
+                backgroundColor: 'color-mix(in oklab, var(--surface-panel) 82%, transparent)',
+              }}
+              layout
               drag="x"
               dragElastic={0.95}
               dragConstraints={{ left: 0, right: 0 }}
@@ -262,27 +275,87 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
               whileDrag={{ rotate: 6 }}
               transition={{ type: 'spring', stiffness: 260, damping: 24 }}
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                Candidate profile
-              </p>
-              <h3 className="mt-2 text-2xl font-semibold tracking-tight">
-                {getFirstName(topCard.name)}
-              </h3>
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                {topCard.department ?? 'No department provided'}
-              </p>
+              <div className="relative mt-2 h-80 overflow-hidden rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)]">
+                {activePhotoUrl ? (
+                  <img
+                    src={activePhotoUrl}
+                    alt={`${topCard.name} profile`}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
+                    No photo available
+                  </div>
+                )}
 
-              {topCard.photo_url ? (
-                <img
-                  src={topCard.photo_url}
-                  alt={`${topCard.name} profile`}
-                  className="mt-4 h-56 w-full rounded-xl border border-[var(--border-soft)] object-cover"
-                />
-              ) : (
-                <div className="mt-4 flex h-56 items-center justify-center rounded-xl border border-dashed border-[var(--border-soft)] bg-[var(--surface-panel-soft)] text-sm text-[var(--text-secondary)]">
-                  No photo available
+                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/65 to-transparent px-3 pb-3 pt-10">
+                  {!isExpanded ? (
+                    <div className="text-white">
+                      <p className="text-lg font-semibold tracking-tight">{getFirstName(topCard.name)}</p>
+                      <p className="text-xs text-white/85">
+                        {topCard.age && topCard.region
+                          ? `${topCard.age} - ${topCard.region}`
+                          : topCard.region ?? 'Profile details available'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setIsExpanded((current) => !current)}
+                    aria-label={isExpanded ? 'Collapse profile details' : 'Expand profile details'}
+                    title={isExpanded ? 'Collapse profile details' : 'Expand profile details'}
+                    className="rounded-full bg-white/20 px-2.5 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/30"
+                  >
+                    {isExpanded ? '▾' : '⤢'}
+                  </button>
                 </div>
-              )}
+
+                {topPhotos.length > 1 ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setPhotoIndex((current) => (current - 1 + topPhotos.length) % topPhotos.length)
+                      }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/45 px-2 py-1 text-sm font-semibold text-white transition hover:bg-black/60"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        setPhotoIndex((current) => (current + 1) % topPhotos.length)
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/45 px-2 py-1 text-sm font-semibold text-white transition hover:bg-black/60"
+                    >
+                      ›
+                    </button>
+                    <p className="absolute right-2 top-2 rounded-full bg-black/45 px-2 py-1 text-[10px] font-semibold text-white">
+                      {photoIndex + 1}/{topPhotos.length}
+                    </p>
+                  </>
+                ) : null}
+              </div>
+
+              {isExpanded ? (
+                <div className="mt-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-3 text-sm text-[var(--text-secondary)]">
+                  <p className="font-semibold text-[var(--text-primary)]">{getFirstName(topCard.name)}</p>
+                  {topCard.bio ? <p className="mt-2">{topCard.bio}</p> : <p className="mt-2">No bio provided.</p>}
+                  <p className="mt-2">
+                    {topCard.age ? `Age: ${topCard.age}` : 'Age not provided'}
+                    {topCard.region ? ` | Region: ${topCard.region}` : ''}
+                  </p>
+                  <p className="mt-1">
+                    {topCard.favorite_genres?.length
+                      ? `Favorite genres: ${topCard.favorite_genres.join(', ')}`
+                      : 'Favorite genres not provided'}
+                  </p>
+                </div>
+              ) : null}
             </motion.div>
           </div>
 

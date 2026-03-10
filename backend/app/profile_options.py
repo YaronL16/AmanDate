@@ -21,7 +21,7 @@ ISRAEL_REGIONS = [
     "Gush Dan",
     "Judea and Samaria",
     "HaShfela",
-    "Otef Aza"
+    "Otef Aza",
     "The Negev",
     "Eilat Area",
 ]

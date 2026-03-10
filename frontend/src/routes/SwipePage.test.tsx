@@ -27,7 +27,7 @@ describe('SwipePage', () => {
       id: 'user-a',
       name: 'Alice',
       bio: null,
-      photo_url: null,
+      photo_urls: null,
       department: 'Eng',
       gender: 'female',
       age: null,
@@ -41,9 +41,13 @@ describe('SwipePage', () => {
       {
         id: 'user-b',
         name: 'Bob',
+        bio: null,
+        age: 29,
+        region: 'Center',
+        favorite_genres: ['Pop'],
         department: 'Product',
         gender: 'male',
-        photo_url: null,
+        photo_urls: ['https://example.com/bob.jpg'],
       },
     ])
     vi.mocked(postSwipe).mockResolvedValue({
@@ -55,7 +59,7 @@ describe('SwipePage', () => {
           id: 'user-b',
           name: 'Bob',
           department: 'Product',
-          photo_url: null,
+          photo_urls: null,
           chat_id: 'U_B',
         },
         chat_thread_url: 'https://chat.internal/users/U_B',
@@ -77,7 +81,7 @@ describe('SwipePage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Candidate profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Bob').length).toBeGreaterThan(0)
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Like' }))

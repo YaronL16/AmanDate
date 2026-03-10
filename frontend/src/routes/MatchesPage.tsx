@@ -83,14 +83,16 @@ export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null })
       {activeUser && !loading && !error && matches.length > 0 ? (
         <ul className="mt-4 space-y-3">
           {matches.map((match) => (
+            // First photo in the array is used as preview.
+            // TODO: consider gallery preview here in future iterations.
             <li
               key={match.id}
               className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4"
             >
               <div className="flex min-w-0 items-center gap-3">
-                {match.other_user.photo_url ? (
+                {match.other_user.photo_urls?.[0] ? (
                   <img
-                    src={match.other_user.photo_url}
+                    src={match.other_user.photo_urls[0]}
                     alt={`${match.other_user.name} profile`}
                     className="h-12 w-12 rounded-full border border-[var(--border-soft)] object-cover"
                   />
