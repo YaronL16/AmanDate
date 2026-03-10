@@ -4,7 +4,7 @@ commonLabels: {}
 global:
   imageRepository: ghcr.io/yaronl16
   imagePullPolicy: IfNotPresent
-  imageTag: "0.1.11"
+  imageTag: "0.1.12"
 config:
   appEnv: development
   chatDeepLinkBaseUrl: https://chat.internal/users
@@ -21,10 +21,10 @@ ingress:
   className: nginx
   annotations: {}
   hosts:
-  - host: amandate.developers-argocd.branch-yesodot.org
-    paths:
-    - path: /
-      pathType: Prefix
+    - host: amandate.developers-argocd.branch-yesodot.org
+      paths:
+        - path: /
+          pathType: Prefix
   tls: []
 database:
   name: amandate
