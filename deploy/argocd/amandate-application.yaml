@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: amandate
+  namespace: developers-argocd
+spec:
+  project: yaron-appproj
+  source:
+    repoURL: https://github.com/yaronl16/AmanDate.git
+    targetRevision: main
+    path: deploy/helm/amandate
+    helm:
+      valueFiles:
+      - values.yaml
+  destination:
+    name: dev
+    namespace: amandate
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
