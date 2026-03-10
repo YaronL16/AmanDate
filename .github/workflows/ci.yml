@@ -157,8 +157,8 @@ jobs:
         cache-from: type=gha,scope=frontend-release
         cache-to: type=gha,mode=max,scope=frontend-release
 
-  update-helm-image-tag:
-    name: Update Helm imageTag from release version
+  update-helm-release-metadata:
+    name: Update Helm release metadata
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
@@ -178,17 +178,56 @@ jobs:
       with:
         cmd: yq '.global.imageTag = strenv(VERSION)' -i deploy/helm/amandate/values.yaml
 
-    - name: Commit and push values update
+    - name: Update chart version and appVersion
+      uses: mikefarah/yq@v4.44.6
+      env:
+        VERSION: ${{ needs.version.outputs.value }}
+      with:
+        cmd: yq '.version = strenv(VERSION) | .appVersion = strenv(VERSION)' -i deploy/helm/amandate/Chart.yaml
+
+    - name: Commit and push Helm metadata update
       env:
         VERSION: ${{ needs.version.outputs.value }}
       run: |
-        if git diff --quiet -- deploy/helm/amandate/values.yaml; then
-          echo "Helm imageTag already set to $VERSION."
+        if git diff --quiet -- deploy/helm/amandate/values.yaml deploy/helm/amandate/Chart.yaml; then
+          echo "Helm metadata already set to $VERSION."
           exit 0
         fi
-        git add deploy/helm/amandate/values.yaml
-        git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "chore(release): set helm imageTag to $VERSION [skip ci]"
+        git add deploy/helm/amandate/values.yaml deploy/helm/amandate/Chart.yaml
+        git -c user.name='github-actions[bot]' -c user.email='github-actions[bot]@users.noreply.github.com' commit -m "chore(release): set helm chart version to $VERSION [skip ci]"
         git push origin HEAD:main
+
+  publish-helm-chart:
+    name: Publish Helm chart to GHCR
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs:
+    - version
+    - update-helm-release-metadata
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: main
+
+    - name: Set up Helm
+      uses: azure/setup-helm@v4
+
+    - name: Login to GHCR for Helm OCI push
+      env:
+        REGISTRY: ${{ env.REGISTRY }}
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login "$REGISTRY" -u "${{ github.actor }}" --password-stdin
+
+    - name: Package and publish chart
+      env:
+        VERSION: ${{ needs.version.outputs.value }}
+        IMAGE_NAMESPACE: ${{ needs.version.outputs.image_namespace }}
+        REGISTRY: ${{ env.REGISTRY }}
+      run: |
+        mkdir -p .helm-dist
+        helm package deploy/helm/amandate --destination .helm-dist
+        helm push ".helm-dist/amandate-${VERSION}.tgz" "oci://${REGISTRY}/${IMAGE_NAMESPACE}/charts"
 
   create-git-tag:
     name: Create git tag for release version
@@ -196,7 +235,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs:
     - version
-    - update-helm-image-tag
+    - update-helm-release-metadata
+    - publish-helm-chart
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -235,3 +275,4 @@ jobs:
           ## Container images
           - Backend: ${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/amandate-backend:${{ needs.version.outputs.value }}
           - Frontend: ${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/amandate-frontend:${{ needs.version.outputs.value }}
+          - Helm chart: oci://${{ env.REGISTRY }}/${{ needs.version.outputs.image_namespace }}/charts/amandate:${{ needs.version.outputs.value }}
