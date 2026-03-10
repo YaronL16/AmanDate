@@ -6,11 +6,11 @@ metadata:
     {{- include "amandate.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
   annotations:
-    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+    {{- toYaml .Values.frontend.ingress.annotations | nindent 4 }}
 spec:
-  ingressClassName: {{ .Values.ingress.className }}
+  ingressClassName: {{ .Values.frontend.ingress.className }}
   rules:
-    {{- range .Values.ingress.hosts }}
+    {{- range .Values.frontend.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
         paths:
@@ -25,4 +25,4 @@ spec:
           {{- end }}
     {{- end }}
   tls:
-    {{- toYaml .Values.ingress.tls | nindent 4 }}
+    {{- toYaml .Values.frontend.ingress.tls | nindent 4 }}

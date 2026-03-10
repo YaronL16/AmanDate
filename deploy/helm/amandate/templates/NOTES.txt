@@ -1,6 +1,6 @@
 1. Get frontend URL:
-{{- range .Values.ingress.hosts }}
-  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- range .Values.frontend.ingress.hosts }}
+  http{{ if $.Values.frontend.ingress.tls }}s{{ end }}://{{ .host }}
 {{- end }}
 
 2. Backend service DNS:

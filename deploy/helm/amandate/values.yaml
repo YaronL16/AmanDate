@@ -10,22 +10,24 @@ config:
   chatDeepLinkBaseUrl: https://chat.internal/users
   enableAdminView: "false"
   adminUserId: ""
+# Backend
 backend:
   replicaCount: 1
   extraEnv: {}
   resources: {}
+# Frontend
 frontend:
   replicaCount: 1
   resources: {}
-ingress:
-  className: nginx
-  annotations: {}
-  hosts:
+  ingress:
+    className: contour
+    annotations: {}
+    hosts:
     - host: amandate.developers-argocd.branch-yesodot.org
       paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+      - path: /
+        pathType: Prefix
+    tls: []
 # Vault Secrets
 vaultStaticSecret:
   # Requires Vault Secrets Operator + VaultAuth in the target namespace.
