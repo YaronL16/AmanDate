@@ -66,8 +66,8 @@ describe('ProfilePage', () => {
 
     expect(screen.getByText('Selected: 3/3')).toBeInTheDocument()
 
-    fireEvent.change(screen.getByLabelText(/^Age$/), { target: { value: '28' } })
-    fireEvent.change(screen.getByLabelText(/^Region$/), { target: { value: 'Center' } })
+    fireEvent.change(screen.getByLabelText(/^Age\s/), { target: { value: '28' } })
+    fireEvent.change(screen.getByLabelText(/^Region\s/), { target: { value: 'Center' } })
 
     fireEvent.click(screen.getByRole('button', { name: 'Photos' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add photo URL (1/5)' }))
@@ -140,14 +140,14 @@ describe('ProfilePage', () => {
       expect(scoped.getByText('Favorite music genres (up to 3)')).toBeInTheDocument()
     })
 
-    fireEvent.change(scoped.getByLabelText(/^Age$/), { target: { value: '29' } })
-    fireEvent.change(scoped.getByLabelText(/^Region$/), { target: { value: 'Center' } })
+    fireEvent.change(scoped.getByLabelText(/^Age\s/), { target: { value: '29' } })
+    fireEvent.change(scoped.getByLabelText(/^Region\s/), { target: { value: 'Center' } })
 
     fireEvent.click(scoped.getByRole('button', { name: 'Preferences' }))
     fireEvent.change(scoped.getByLabelText('Desired minimum age'), { target: { value: '27' } })
     fireEvent.change(scoped.getByLabelText('Desired maximum age'), { target: { value: '36' } })
     fireEvent.click(scoped.getByLabelText('Center'))
-    fireEvent.click(scoped.getByLabelText('male'))
+    fireEvent.click(scoped.getByLabelText('Male'))
     fireEvent.click(scoped.getByRole('button', { name: 'Save profile' }))
 
     await waitFor(() => {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 import type { MockAuthUser } from '../mocks/users'
 import { ApiError } from '../lib/api/client'
@@ -19,27 +20,28 @@ function getFirstName(fullName: string): string {
   return trimmed.split(/\s+/)[0] ?? fullName
 }
 
-function getApiErrorMessage(error: unknown): string {
-  if (!(error instanceof ApiError)) {
-    return 'Unexpected error. Please try again.'
-  }
-
-  if (error.status === 404) {
-    return 'Current user was not found. Please create your profile first.'
-  }
-
-  if (error.status === 400) {
-    return 'Swipe request is invalid for this profile.'
-  }
-
-  if (error.status === 422) {
-    return 'Invalid swipe data was sent. Please refresh and try again.'
-  }
-
-  return `Request failed (${error.status}). Please retry.`
+function useApiErrorMessage() {
+  const { t } = useTranslation()
+  return useCallback((error: unknown): string => {
+    if (!(error instanceof ApiError)) {
+      return t('swipe.errorUnexpected')
+    }
+    if (error.status === 404) {
+      return t('swipe.errorUserNotFound')
+    }
+    if (error.status === 400) {
+      return t('swipe.errorInvalidSwipe')
+    }
+    if (error.status === 422) {
+      return t('swipe.errorInvalidData')
+    }
+    return t('swipe.errorRequest', { status: error.status })
+  }, [t])
 }
 
 export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
+  const { t } = useTranslation()
+  const getApiErrorMessage = useApiErrorMessage()
   const [backendUserId, setBackendUserId] = useState<string | null>(null)
   const [isEnabled, setIsEnabled] = useState(false)
   const [cards, setCards] = useState<UserCard[]>([])
@@ -75,7 +77,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
         setLoading(false)
       }
     },
-    [backendUserId],
+    [backendUserId, getApiErrorMessage],
   )
 
   useEffect(() => {
@@ -116,9 +118,9 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
       })
       .catch(() => {
         setLoading(false)
-        setError('Failed to resolve current user. Please retry.')
+        setError(t('swipe.errorResolveUser'))
       })
-  }, [activeUser])
+  }, [activeUser, t])
 
   useEffect(() => {
     if (!backendUserId || !isEnabled) return
@@ -160,7 +162,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
         setIsSwiping(false)
       }
     },
-    [backendUserId, isSwiping, topCard],
+    [backendUserId, getApiErrorMessage, isSwiping, topCard],
   )
 
   useEffect(() => {
@@ -179,17 +181,17 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   }
 
   const cardCounterLabel = useMemo(() => {
-    if (loading) return 'Loading...'
-    if (!cards.length) return 'No candidates'
-    return `${cards.length} candidate${cards.length > 1 ? 's' : ''} in queue`
-  }, [cards.length, loading])
+    if (loading) return t('swipe.loading')
+    if (!cards.length) return t('swipe.noCandidates')
+    return t('swipe.candidatesInQueue', { count: cards.length })
+  }, [cards.length, loading, t])
 
   if (!hasUser) {
     return (
       <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
-        <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{t('swipe.title')}</h2>
         <p className="mt-3 text-sm text-[var(--text-secondary)]">
-          Login with a test user id to start swiping.
+          {t('swipe.loginPrompt')}
         </p>
       </section>
     )
@@ -198,15 +200,15 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
   if (hasUser && !loading && backendUserId && !isEnabled) {
     return (
       <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
-        <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{t('swipe.title')}</h2>
         <p className="mt-3 text-sm text-[var(--text-secondary)]">
-          Your account is not activated yet. Activate it in profile to start swiping and appear in discovery.
+          {t('swipe.accountNotActivated')}
         </p>
         <Link
           to="/profile"
           className="mt-4 inline-flex rounded-xl bg-[var(--accent-primary)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
         >
-          Go to Profile
+          {t('swipe.goToProfile')}
         </Link>
       </section>
     )
@@ -216,7 +218,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
     <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Swipe</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{t('swipe.title')}</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">{cardCounterLabel}</p>
         </div>
       </div>
@@ -229,14 +231,14 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
             onClick={onRetry}
             className="mt-2 rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
           >
-            Retry
+            {t('swipe.retry')}
           </button>
         </div>
       )}
 
       {loading ? (
         <div className="h-[420px] rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-6">
-          <p className="text-sm text-[var(--text-secondary)]">Loading discovery candidates...</p>
+          <p className="text-sm text-[var(--text-secondary)]">{t('swipe.loadingCandidates')}</p>
         </div>
       ) : topCard ? (
         <div>
@@ -244,13 +246,13 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
             {nextCard && !isExpanded ? (
               <div className="absolute inset-x-4 top-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-6 opacity-65">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-secondary)]">
-                  Up next
+                  {t('swipe.upNext')}
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-[var(--text-primary)]">{getFirstName(nextCard.name)}</h3>
                 <p className="mt-2 text-sm text-[var(--text-secondary)]">
                   {nextCard.age && nextCard.region
-                    ? `${nextCard.age} - ${nextCard.region}`
-                    : nextCard.region ?? nextCard.department ?? 'No additional details'}
+                    ? <><span dir="ltr">{nextCard.age}</span> - {t(`options.regions.${nextCard.region}`, nextCard.region)}</>
+                    : nextCard.region ? t(`options.regions.${nextCard.region}`, nextCard.region) : nextCard.department ?? t('swipe.noAdditionalDetails')}
                 </p>
               </div>
             ) : null}
@@ -284,7 +286,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-[var(--text-secondary)]">
-                    No photo available
+                    {t('swipe.noPhotoAvailable')}
                   </div>
                 )}
 
@@ -294,8 +296,8 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                       <p className="text-lg font-semibold tracking-tight">{getFirstName(topCard.name)}</p>
                       <p className="text-xs text-white/85">
                         {topCard.age && topCard.region
-                          ? `${topCard.age} - ${topCard.region}`
-                          : topCard.region ?? 'Profile details available'}
+                          ? <><span dir="ltr">{topCard.age}</span> - {t(`options.regions.${topCard.region}`, topCard.region)}</>
+                          : topCard.region ? t(`options.regions.${topCard.region}`, topCard.region) : t('swipe.profileDetailsAvailable')}
                       </p>
                     </div>
                   ) : (
@@ -304,8 +306,8 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                   <button
                     type="button"
                     onClick={() => setIsExpanded((current) => !current)}
-                    aria-label={isExpanded ? 'Collapse profile details' : 'Expand profile details'}
-                    title={isExpanded ? 'Collapse profile details' : 'Expand profile details'}
+                    aria-label={isExpanded ? t('swipe.collapseProfile') : t('swipe.expandProfile')}
+                    title={isExpanded ? t('swipe.collapseProfile') : t('swipe.expandProfile')}
                     className="rounded-full bg-white/20 px-2.5 py-1.5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/30"
                   >
                     {isExpanded ? '▾' : '⤢'}
@@ -320,7 +322,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                         event.stopPropagation()
                         setPhotoIndex((current) => (current - 1 + topPhotos.length) % topPhotos.length)
                       }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/45 px-2 py-1 text-sm font-semibold text-white transition hover:bg-black/60"
+                      className="absolute top-1/2 -translate-y-1/2 rounded-full bg-black/45 px-2 py-1 text-sm font-semibold text-white transition hover:bg-black/60 ltr:left-2 rtl:right-2"
                     >
                       ‹
                     </button>
@@ -330,12 +332,12 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                         event.stopPropagation()
                         setPhotoIndex((current) => (current + 1) % topPhotos.length)
                       }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/45 px-2 py-1 text-sm font-semibold text-white transition hover:bg-black/60"
+                      className="absolute top-1/2 -translate-y-1/2 rounded-full bg-black/45 px-2 py-1 text-sm font-semibold text-white transition hover:bg-black/60 ltr:right-2 rtl:left-2"
                     >
                       ›
                     </button>
-                    <p className="absolute right-2 top-2 rounded-full bg-black/45 px-2 py-1 text-[10px] font-semibold text-white">
-                      {photoIndex + 1}/{topPhotos.length}
+                    <p className="absolute top-2 rounded-full bg-black/45 px-2 py-1 text-[10px] font-semibold text-white ltr:right-2 rtl:left-2">
+                      <span dir="ltr">{photoIndex + 1}/{topPhotos.length}</span>
                     </p>
                   </>
                 ) : null}
@@ -344,15 +346,15 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
               {isExpanded ? (
                 <div className="mt-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-3 text-sm text-[var(--text-secondary)]">
                   <p className="font-semibold text-[var(--text-primary)]">{getFirstName(topCard.name)}</p>
-                  {topCard.bio ? <p className="mt-2">{topCard.bio}</p> : <p className="mt-2">No bio provided.</p>}
+                  {topCard.bio ? <p className="mt-2">{topCard.bio}</p> : <p className="mt-2">{t('swipe.noBioProvided')}</p>}
                   <p className="mt-2">
-                    {topCard.age ? `Age: ${topCard.age}` : 'Age not provided'}
-                    {topCard.region ? ` | Region: ${topCard.region}` : ''}
+                    {topCard.age ? <><span>{t('swipe.ageLabel', { age: '' })}</span><span dir="ltr">{topCard.age}</span></> : t('swipe.ageNotProvided')}
+                    {topCard.region ? ` | ${t('swipe.regionLabel', { region: t(`options.regions.${topCard.region}`, topCard.region) })}` : ''}
                   </p>
                   <p className="mt-1">
                     {topCard.favorite_genres?.length
-                      ? `Favorite genres: ${topCard.favorite_genres.join(', ')}`
-                      : 'Favorite genres not provided'}
+                      ? t('swipe.favoriteGenresLabel', { genres: topCard.favorite_genres.map((g) => t(`options.genres.${g}`, g)).join(', ') })
+                      : t('swipe.favoriteGenresNotProvided')}
                   </p>
                 </div>
               ) : null}
@@ -366,7 +368,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
               disabled={isSwiping}
               className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-55"
             >
-              Pass
+              {t('swipe.pass')}
             </button>
             <button
               type="button"
@@ -374,22 +376,22 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
               disabled={isSwiping}
               className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
             >
-              Like
+              {t('swipe.like')}
             </button>
           </div>
         </div>
       ) : (
         <div className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-8 text-center">
-          <h3 className="text-lg font-semibold">You are all caught up</h3>
+          <h3 className="text-lg font-semibold">{t('swipe.allCaughtUp')}</h3>
           <p className="mt-2 text-sm text-[var(--text-secondary)]">
-            No more candidates right now. Check back later for new profiles.
+            {t('swipe.allCaughtUpHint')}
           </p>
           <button
             type="button"
             onClick={onRetry}
             className="mt-4 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)]"
           >
-            Refresh candidates
+            {t('swipe.refreshCandidates')}
           </button>
         </div>
       )}
@@ -442,13 +444,13 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                 animate={{ scale: [1, 1.04, 1] }}
                 transition={{ duration: 1.2, repeat: Number.POSITIVE_INFINITY, ease: 'easeInOut' }}
               >
-                It&apos;s a Match!
+                {t('swipe.itsAMatch')}
               </motion.p>
               <h3 className="mt-3 text-3xl font-semibold tracking-tight">
-                You and {activeMatch.other_user.name} liked each other
+                {t('swipe.youAndLiked', { name: activeMatch.other_user.name })}
               </h3>
               <p className="mt-3 text-base text-[var(--text-secondary)]">
-                Start the conversation now using your configured chat app deep link.
+                {t('swipe.startConversation')}
               </p>
               <div className="mt-7 flex items-center justify-end gap-2">
                 <button
@@ -456,7 +458,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                   onClick={() => setActiveMatch(null)}
                   className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)]"
                 >
-                  Maybe later
+                  {t('swipe.maybeLater')}
                 </button>
                 {activeMatch.chat_thread_url ? (
                   <a
@@ -466,7 +468,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                     onClick={() => setActiveMatch(null)}
                     className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
                   >
-                    Open chat
+                    {t('swipe.openChat')}
                   </a>
                 ) : (
                   <button
@@ -474,7 +476,7 @@ export function SwipePage({ activeUser }: { activeUser: MockAuthUser | null }) {
                     onClick={() => setActiveMatch(null)}
                     className="rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
                   >
-                    Close
+                    {t('swipe.close')}
                   </button>
                 )}
               </div>

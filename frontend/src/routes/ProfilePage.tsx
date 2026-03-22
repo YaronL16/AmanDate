@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { MockAuthUser } from '../mocks/users'
 import { ApiError } from '../lib/api/client'
@@ -73,13 +74,16 @@ function fromUser(user: UserOut): FormState {
   }
 }
 
-function getApiErrorMessage(error: unknown): string {
+function getApiErrorMessage(
+  error: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
   if (!(error instanceof ApiError)) {
-    return 'Unexpected error. Please try again.'
+    return t('profile.errorUnexpected')
   }
 
   if (error.status === 409) {
-    return 'chat_id is already in use. Please choose a different one.'
+    return t('profile.errorChatIdConflict')
   }
 
   if (error.status === 422) {
@@ -87,13 +91,14 @@ function getApiErrorMessage(error: unknown): string {
     if (Array.isArray(body?.detail) && body.detail.length > 0) {
       return body.detail.map((item) => item.msg).join('; ')
     }
-    return 'Validation failed. Please review the form values.'
+    return t('profile.errorValidation')
   }
 
-  return `Request failed (${error.status}). Please retry.`
+  return t('profile.errorRequest', { status: error.status })
 }
 
 export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null }) {
+  const { t } = useTranslation('common')
   const [backendUserId, setBackendUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'photos' | 'user-info'>('profile')
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -117,7 +122,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     ((desiredAgeMax - AGE_RANGE_MIN) / (AGE_RANGE_MAX - AGE_RANGE_MIN)) * 100
   const desiredAgeLabel =
     form.preferred_age_min === null && form.preferred_age_max === null
-      ? 'Any age'
+      ? t('profile.anyAge')
       : `${desiredAgeMin} - ${desiredAgeMax}`
   const desiredAgeBubbleCenterPercent = (desiredAgeMinPercent + desiredAgeMaxPercent) / 2
 
@@ -150,7 +155,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       })
       .catch(() => {
         if (cancelled) return
-        setError('Failed to load profile. Please retry.')
+        setError(t('profile.errorLoadProfile'))
       })
       .finally(() => {
         if (!cancelled) {
@@ -186,7 +191,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       })
       .catch(() => {
         if (cancelled) return
-        setOptionsError('Failed to load profile options. Please retry.')
+        setOptionsError(t('profile.errorLoadOptions'))
       })
       .finally(() => {
         if (cancelled) return
@@ -292,7 +297,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!activeUser) {
-      setError('Please login with a test user id first.')
+      setError(t('profile.errorLoginFirst'))
       return
     }
 
@@ -301,7 +306,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
     setShowRequiredHints(true)
 
     if (form.age === null || !form.region) {
-      setError('Please fill in both age and region before saving your account.')
+      setError(t('profile.errorAgeRegion'))
       return
     }
     if (
@@ -309,16 +314,14 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       form.preferred_age_max !== null &&
       form.preferred_age_min > form.preferred_age_max
     ) {
-      setError('Preferred minimum age must be less than or equal to preferred maximum age.')
+      setError(t('profile.errorAgeRange'))
       return
     }
     setShowRequiredHints(false)
 
     const enablingNow = !persistedIsActive && form.is_active
     if (enablingNow) {
-      const confirmed = window.confirm(
-        'Activate account now? Once activated, you will be visible in discovery and can swipe.',
-      )
+      const confirmed = window.confirm(t('profile.activateConfirm'))
       if (!confirmed) {
         return
       }
@@ -352,9 +355,9 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
       setBackendUserId(user.id)
       setForm(fromUser(user))
       setPersistedIsActive(user.is_active)
-      setSuccess(backendUserId ? 'Profile updated.' : 'Profile created.')
+      setSuccess(backendUserId ? t('profile.profileUpdated') : t('profile.profileCreated'))
     } catch (submitError) {
-      setError(getApiErrorMessage(submitError))
+      setError(getApiErrorMessage(submitError, t))
     } finally {
       setSaving(false)
     }
@@ -363,9 +366,9 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   if (!activeUser) {
     return (
       <section className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
-        <h2 className="text-2xl font-semibold tracking-tight">Profile</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{t('profile.title')}</h2>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          Login with a test user id to view and edit your profile.
+          {t('profile.loginPrompt')}
         </p>
       </section>
     )
@@ -374,7 +377,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
   if (loading) {
     return (
       <div className="mx-auto w-full max-w-3xl rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-6 shadow-[0_10px_30px_rgba(23,80,88,0.08)]">
-        <p className="text-sm text-[var(--text-secondary)]">Loading profile...</p>
+        <p className="text-sm text-[var(--text-secondary)]">{t('profile.loadingProfile')}</p>
       </div>
     )
   }
@@ -385,7 +388,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{firstName}</h2>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
-            {backendUserId ? 'Editing saved profile' : 'New profile setup'}
+            {backendUserId ? t('profile.editingSaved') : t('profile.newSetup')}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -394,16 +397,16 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               ? 'bg-emerald-100 text-emerald-700'
               : 'bg-amber-100 text-amber-800'}`}
           >
-            {persistedIsActive ? 'Activated' : 'Not activated'}
+            {persistedIsActive ? t('profile.activated') : t('profile.notActivated')}
           </span>
           <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent-primary-strong)]">
-            Identity from test dataset
+            {t('profile.identityTestDataset')}
           </span>
         </div>
       </div>
 
       <p className="mb-6 text-sm text-[var(--text-secondary)]">
-          Create or update your profile for discovery.
+        {t('profile.createOrUpdate')}
       </p>
 
       {error && (
@@ -433,7 +436,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                 : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
             }`}
           >
-            Profile
+            {t('profile.tabProfile')}
           </button>
           <button
             type="button"
@@ -444,7 +447,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                 : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
             }`}
           >
-            Photos
+            {t('profile.tabPhotos')}
           </button>
           <button
             type="button"
@@ -455,7 +458,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                 : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
             }`}
           >
-            Preferences
+            {t('profile.tabPreferences')}
           </button>
           <button
             type="button"
@@ -466,17 +469,17 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                 : 'bg-[var(--surface-panel-soft)] text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'
             }`}
           >
-            My account
+            {t('profile.tabMyAccount')}
           </button>
         </div>
 
         {activeTab === 'profile' ? (
           <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
             <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-              Profile information
+              {t('profile.profileInfo')}
             </h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              This is your editable public profile.
+              {t('profile.editablePublicProfile')}
             </p>
 
             <div className="mt-4 space-y-4">
@@ -490,19 +493,20 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                     disabled={saving}
                   />
                   <span className="text-sm text-[var(--text-primary)]">
-                    Activate my account so I can swipe and appear in discovery.
+                    {t('profile.activateAccount')}
                   </span>
                 </label>
               </div>
 
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-                  Age <span className="text-red-600">*</span>
+                  {t('profile.age')} <span className="text-red-600">*</span>
                 </span>
                 <input
                   type="number"
                   min={18}
                   max={80}
+                  dir="ltr"
                   className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && form.age === null ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
                   value={form.age ?? ''}
                   onChange={(e) =>
@@ -513,13 +517,13 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                   }
                 />
                 {showRequiredHints && form.age === null ? (
-                  <p className="mt-1 text-xs text-red-600">Age is required.</p>
+                  <p className="mt-1 text-xs text-red-600">{t('profile.ageRequired')}</p>
                 ) : null}
               </label>
 
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">
-                  Region <span className="text-red-600">*</span>
+                  {t('profile.region')} <span className="text-red-600">*</span>
                 </span>
                 <select
                   className={`w-full rounded-xl border bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35 ${showRequiredHints && !form.region ? 'border-red-300 ring-2 ring-red-200/70' : 'border-[var(--border-soft)]'}`}
@@ -531,20 +535,20 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                     }))
                   }
                 >
-                  <option value="">Select region</option>
+                  <option value="">{t('profile.selectRegion')}</option>
                   {regions.map((region) => (
                     <option key={region} value={region}>
-                      {region}
+                      {t(`options.regions.${region}`, region)}
                     </option>
                   ))}
                 </select>
                 {showRequiredHints && !form.region ? (
-                  <p className="mt-1 text-xs text-red-600">Region is required.</p>
+                  <p className="mt-1 text-xs text-red-600">{t('profile.regionRequired')}</p>
                 ) : null}
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Bio</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">{t('profile.bio')}</span>
                 <textarea
                   className="min-h-28 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
                   value={form.bio}
@@ -554,10 +558,10 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
 
               <div>
                 <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                  Favorite music genres (up to 3)
+                  {t('profile.favoriteGenres')}
                 </p>
                 {optionsLoading ? (
-                  <p className="text-xs text-[var(--text-secondary)]">Loading genres...</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{t('profile.loadingGenres')}</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {musicGenres.map((genre) => {
@@ -579,23 +583,23 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                             onChange={() => toggleGenre(genre)}
                             className="h-4 w-4 accent-[var(--accent-primary)]"
                           />
-                          <span>{genre}</span>
+                          <span>{t(`options.genres.${genre}`, genre)}</span>
                         </label>
                       )
                     })}
                   </div>
                 )}
                 <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                  Selected: {form.favorite_genres.length}/3
+                  {t('profile.selectedCount', { count: form.favorite_genres.length })}
                 </p>
               </div>
             </div>
           </div>
         ) : activeTab === 'photos' ? (
           <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
-            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">Photos</h3>
+            <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">{t('profile.photos')}</h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Add up to 5 photo URLs. Discovery cards will display them as a carousel.
+              {t('profile.photosHint')}
             </p>
 
             <div className="mt-4 space-y-3">
@@ -604,7 +608,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                   <div className="flex items-center gap-2">
                     <input
                       className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition focus:border-[var(--focus-ring)] focus:ring-2 focus:ring-[color:var(--focus-ring)]/35"
-                      placeholder={`Photo URL #${index + 1}`}
+                      placeholder={t('profile.photoPlaceholder', { index: index + 1 })}
                       value={photoUrl}
                       onChange={(e) => setPhotoAt(index, e.target.value)}
                     />
@@ -614,13 +618,13 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                       disabled={form.photo_urls.length === 1}
                       className="rounded-lg border border-[var(--border-soft)] px-2.5 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-45"
                     >
-                      Remove
+                      {t('profile.remove')}
                     </button>
                   </div>
                   {photoUrl.trim() ? (
                     <img
                       src={photoUrl.trim()}
-                      alt={`Preview ${index + 1}`}
+                      alt={t('profile.previewAlt', { index: index + 1 })}
                       className="mt-3 w-full rounded-xl border border-[var(--border-soft)] object-contain"
                     />
                   ) : null}
@@ -632,23 +636,23 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                 disabled={form.photo_urls.length >= 5}
                 className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-45"
               >
-                Add photo URL ({form.photo_urls.length}/5)
+                {t('profile.addPhotoUrl', { count: form.photo_urls.length })}
               </button>
             </div>
           </div>
         ) : activeTab === 'preferences' ? (
           <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
             <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-              Discovery preferences
+              {t('profile.discoveryPreferences')}
             </h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Configure who you want to discover. Use "Clear" for unrestricted desired age.
+              {t('profile.preferencesHint')}
             </p>
 
             <div className="mt-4 space-y-4">
-              <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] p-3">
+              <div className="rounded-lg border border-[var(--border-soft)] bg-[var(--surface-panel)] p-3" dir="ltr">
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="text-sm font-medium text-[var(--text-primary)]">Desired age range</p>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">{t('profile.desiredAgeRange')}</p>
                   <button
                     type="button"
                     className="rounded-md border border-[var(--border-soft)] px-2 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--accent-soft)]"
@@ -660,7 +664,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                       }))
                     }
                   >
-                    Clear
+                    {t('profile.clear')}
                   </button>
                 </div>
                 <div className="mb-3 flex justify-center">
@@ -688,7 +692,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                     min={AGE_RANGE_MIN}
                     max={AGE_RANGE_MAX}
                     value={desiredAgeMin}
-                    aria-label="Desired minimum age"
+                    aria-label={t('profile.desiredMinAge')}
                     className="pointer-events-none absolute left-0 top-1/2 z-30 h-1 w-full -translate-y-1/2 appearance-none bg-transparent accent-[var(--accent-primary)] [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--accent-primary)] [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--accent-primary)] [&::-moz-range-thumb]:bg-white"
                     onChange={(e) => setDesiredAgeMin(Number(e.target.value))}
                   />
@@ -697,7 +701,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                     min={AGE_RANGE_MIN}
                     max={AGE_RANGE_MAX}
                     value={desiredAgeMax}
-                    aria-label="Desired maximum age"
+                    aria-label={t('profile.desiredMaxAge')}
                     className="pointer-events-none absolute left-0 top-1/2 z-20 h-1 w-full -translate-y-1/2 appearance-none bg-transparent accent-[var(--accent-primary)] [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[var(--accent-primary)] [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[var(--accent-primary)] [&::-moz-range-thumb]:bg-white"
                     onChange={(e) => setDesiredAgeMax(Number(e.target.value))}
                   />
@@ -706,10 +710,10 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
 
               <div>
                 <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                  Desired regions
+                  {t('profile.desiredRegions')}
                 </p>
                 {optionsLoading ? (
-                  <p className="text-xs text-[var(--text-secondary)]">Loading regions...</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{t('profile.loadingRegions')}</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {regions.map((region) => {
@@ -729,7 +733,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                             onChange={() => togglePreferredRegion(region)}
                             className="h-4 w-4 accent-[var(--accent-primary)]"
                           />
-                          <span>{region}</span>
+                          <span>{t(`options.regions.${region}`, region)}</span>
                         </label>
                       )
                     })}
@@ -739,10 +743,10 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
 
               <div>
                 <p className="mb-2 block text-sm font-medium text-[var(--text-primary)]">
-                  Desired genders
+                  {t('profile.desiredGenders')}
                 </p>
                 {optionsLoading ? (
-                  <p className="text-xs text-[var(--text-secondary)]">Loading genders...</p>
+                  <p className="text-xs text-[var(--text-secondary)]">{t('profile.loadingGenders')}</p>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {discoveryGenders.map((gender) => {
@@ -762,7 +766,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
                             onChange={() => togglePreferredGender(gender)}
                             className="h-4 w-4 accent-[var(--accent-primary)]"
                           />
-                          <span className="capitalize">{gender}</span>
+                          <span>{t(`options.genders.${gender}`, gender)}</span>
                         </label>
                       )
                     })}
@@ -774,23 +778,23 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
         ) : (
           <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel-soft)] p-4">
             <h3 className="text-sm font-semibold tracking-wide text-[var(--text-primary)]">
-              User information (read-only)
+              {t('profile.userInfo')}
             </h3>
             <p className="mt-1 text-xs text-[var(--text-secondary)]">
-              Managed by identity source; cannot be edited here.
+              {t('profile.userInfoHint')}
             </p>
             <div className="mt-4 space-y-4">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">User ID</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">{t('profile.userId')}</span>
                 <input
                   className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                  value={backendUserId ?? 'Will be assigned after first save'}
+                  value={backendUserId ?? t('profile.userIdPending')}
                   disabled
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Name</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">{t('profile.name')}</span>
                 <input
                   className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
                   value={activeUser.name}
@@ -799,7 +803,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Chat Link</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">{t('profile.chatLink')}</span>
                 <input
                   className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
                   value={activeUser.chat_id}
@@ -808,7 +812,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Department</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">{t('profile.department')}</span>
                 <input
                   className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
                   value={activeUser.department}
@@ -817,10 +821,10 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">Gender</span>
+                <span className="mb-1 block text-sm font-medium text-[var(--text-primary)]">{t('profile.gender')}</span>
                 <input
                   className="w-full cursor-not-allowed rounded-xl border border-[var(--border-soft)] bg-[var(--surface-panel)] px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-70 shadow-sm"
-                  value={activeUser.gender}
+                  value={t(`options.genders.${activeUser.gender}`, activeUser.gender)}
                   disabled
                 />
               </label>
@@ -834,7 +838,7 @@ export function ProfilePage({ activeUser }: { activeUser: MockAuthUser | null })
             className="rounded-xl bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-primary-strong)] disabled:cursor-not-allowed disabled:opacity-55"
             disabled={saving}
           >
-            {saving ? 'Saving...' : 'Save profile'}
+            {saving ? t('profile.saving') : t('profile.saveProfile')}
           </button>
         ) : null}
       </form>
