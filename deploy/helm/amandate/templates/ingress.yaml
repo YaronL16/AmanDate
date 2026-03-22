@@ -32,4 +32,12 @@ spec:
           {{- end }}
     {{- end }}
   tls:
-    {{- toYaml .Values.frontend.ingress.tls | nindent 4 }}
+{{- if and .Values.frontend.ingress.tls .Values.frontend.ingress.tls.secretName }}
+    - secretName: {{ .Values.frontend.ingress.tls.secretName | quote }}
+      hosts:
+{{- range .Values.frontend.ingress.hosts }}
+        - {{ .host | quote }}
+{{- end }}
+{{- else }}
+    []
+{{- end }}

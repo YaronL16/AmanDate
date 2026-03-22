@@ -23,11 +23,14 @@ frontend:
     className: contour
     annotations: {}
     hosts:
-      - host: amandate.developers-argocd.branch-yesodot.org
-        paths:
-          - path: /
-            pathType: Prefix
-    tls: []
+    - host: amandate.developers-argocd.branch-yesodot.org
+      paths:
+      - path: /
+        pathType: Prefix
+    # HTTPS: set secretName to a TLS Secret in the release namespace (e.g. cert-manager or manual).
+    # Hostnames on the cert entry match ingress.hosts above.
+    tls:
+      secretName: "yesodot-tls-wild"
 # Vault Secrets
 vaultStaticSecret:
   # Requires Vault Secrets Operator + VaultAuth in the target namespace.
