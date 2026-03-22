@@ -14,6 +14,13 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "amandate.backend.fullname" $ }}
+                port:
+                  number: 8000
           {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType }}

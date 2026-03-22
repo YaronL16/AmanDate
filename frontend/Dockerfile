@@ -7,7 +7,8 @@ COPY frontend/package*.json ./
 RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY frontend/ ./
-ARG VITE_API_BASE_URL=http://localhost:8000
+# Empty default: same-origin /api via Ingress in Kubernetes. Override for local/docker-compose (see docker-compose.yml).
+ARG VITE_API_BASE_URL=
 ARG VITE_ENABLE_ADMIN_VIEW=false
 ARG VITE_ADMIN_USER_ID=
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
