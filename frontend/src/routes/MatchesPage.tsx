@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { MockAuthUser } from '../mocks/users'
 import { ApiError } from '../lib/api/client'
@@ -6,19 +7,22 @@ import { getMatches } from '../lib/api/matches'
 import type { MatchOut } from '../lib/api/types'
 import { findUserByChatId } from '../lib/api/users'
 
-function getApiErrorMessage(error: unknown): string {
-  if (!(error instanceof ApiError)) {
-    return 'Unexpected error. Please try again.'
-  }
-
-  if (error.status === 404) {
-    return 'Current user was not found. Please create your profile first.'
-  }
-
-  return `Request failed (${error.status}). Please retry.`
+function useApiErrorMessage() {
+  const { t } = useTranslation()
+  return useCallback((error: unknown): string => {
+    if (!(error instanceof ApiError)) {
+      return t('matches.errorUnexpected')
+    }
+    if (error.status === 404) {
+      return t('matches.errorUserNotFound')
+    }
+    return t('matches.errorRequest', { status: error.status })
+  }, [t])
 }
 
 export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null }) {
+  const { t } = useTranslation()
+  const getApiErrorMessage = useApiErrorMessage()
   const [matches, setMatches] = useState<MatchOut[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +41,7 @@ export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null })
         if (!user) {
           setMatches([])
           setLoading(false)
-          setError('Current user was not found. Please create your profile first.')
+          setError(t('matches.errorUserNotFound'))
           return
         }
         const result = await getMatches(user.id)
@@ -49,23 +53,23 @@ export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null })
       .finally(() => {
         setLoading(false)
       })
-  }, [activeUser])
+  }, [activeUser, getApiErrorMessage, t])
 
   return (
     <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-panel)] p-7 shadow-[0_12px_32px_rgba(23,80,88,0.08)]">
       <div className="mb-4 flex items-center gap-2">
         <span className="inline-flex h-2.5 w-2.5 rounded-full bg-[var(--accent-primary)]" />
-        <h2 className="text-2xl font-semibold tracking-tight">Matches</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">{t('matches.title')}</h2>
       </div>
 
       {!activeUser ? (
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          Login with a test user id to view your matches.
+          {t('matches.loginPrompt')}
         </p>
       ) : null}
 
       {activeUser && loading ? (
-        <p className="mt-2 text-sm text-[var(--text-secondary)]">Loading matches...</p>
+        <p className="mt-2 text-sm text-[var(--text-secondary)]">{t('matches.loadingMatches')}</p>
       ) : null}
 
       {activeUser && error ? (
@@ -76,7 +80,7 @@ export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null })
 
       {activeUser && !loading && !error && matches.length === 0 ? (
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          No matches yet. Keep swiping to find your next connection.
+          {t('matches.noMatchesYet')}
         </p>
       ) : null}
 
@@ -106,7 +110,7 @@ export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null })
                     {match.other_user.name}
                   </p>
                   <p className="truncate text-xs text-[var(--text-secondary)]">
-                    {match.other_user.department ?? 'No department provided'}
+                    {match.other_user.department ?? t('matches.noDepartment')}
                   </p>
                 </div>
               </div>
@@ -117,10 +121,10 @@ export function MatchesPage({ activeUser }: { activeUser: MockAuthUser | null })
                   rel="noreferrer"
                   className="shrink-0 rounded-lg bg-[var(--accent-primary)] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[var(--accent-primary-strong)]"
                 >
-                  Open chat
+                  {t('matches.openChat')}
                 </a>
               ) : (
-                <span className="shrink-0 text-xs text-[var(--text-secondary)]">Chat unavailable</span>
+                <span className="shrink-0 text-xs text-[var(--text-secondary)]">{t('matches.chatUnavailable')}</span>
               )}
             </li>
           ))}

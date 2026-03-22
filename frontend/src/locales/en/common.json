@@ -8,7 +8,10 @@
     "lightMode": "Light mode",
     "darkMode": "Dark mode",
     "goHome": "Go to home page",
-    "logoAlt": "AmanDate logo"
+    "logoAlt": "AmanDate logo",
+    "languageToggle": "Language and layout",
+    "switchToEnglish": "Switch to English (left to right)",
+    "switchToHebrew": "Switch to Hebrew (right to left)"
   },
   "session": {
     "loggedInAs": "Logged in as <bold>{{userId}}</bold> - {{name}} ({{department}})",

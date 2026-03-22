@@ -8,7 +8,10 @@
     "lightMode": "מצב בהיר",
     "darkMode": "מצב כהה",
     "goHome": "חזרה לדף הבית",
-    "logoAlt": "לוגו AmanDate"
+    "logoAlt": "לוגו AmanDate",
+    "languageToggle": "שפה וכיוון",
+    "switchToEnglish": "מעבר לאנגלית (משמאל לימין)",
+    "switchToHebrew": "מעבר לעברית (מימין לשמאל)"
   },
   "session": {
     "loggedInAs": "מחובר/ת בתור <bold>{{userId}}</bold> - {{name}} ({{department}})",
