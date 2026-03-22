@@ -23,7 +23,7 @@ frontend:
     className: contour
     annotations: {}
     hosts:
-    - host: amandate.developers-argocd.branch-yesodot.org
+    - host: amandate.branch-yesodot.org
       paths:
       - path: /
         pathType: Prefix
