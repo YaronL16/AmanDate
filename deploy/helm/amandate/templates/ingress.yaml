@@ -1,12 +1,17 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
+{{- $tlsEnabled := and .Values.frontend.ingress.tls .Values.frontend.ingress.tls.clusterIssuerName }}
+{{- $annotations := .Values.frontend.ingress.annotations | default dict }}
+{{- if $tlsEnabled }}
+{{- $annotations = merge $annotations (dict "cert-manager.io/cluster-issuer" .Values.frontend.ingress.tls.clusterIssuerName) }}
+{{- end }}
 metadata:
   name: {{ include "amandate.frontend.fullname" . }}
   labels:
     {{- include "amandate.labels" . | nindent 4 }}
     app.kubernetes.io/component: frontend
   annotations:
-    {{- toYaml .Values.frontend.ingress.annotations | nindent 4 }}
+    {{- toYaml $annotations | nindent 4 }}
 spec:
   ingressClassName: {{ .Values.frontend.ingress.className }}
   rules:
@@ -32,8 +37,8 @@ spec:
           {{- end }}
     {{- end }}
   tls:
-{{- if and .Values.frontend.ingress.tls .Values.frontend.ingress.tls.secretName }}
-    - secretName: {{ .Values.frontend.ingress.tls.secretName | quote }}
+{{- if $tlsEnabled }}
+    - secretName: {{ printf "%s-tls" (include "amandate.frontend.fullname" .) | quote }}
       hosts:
 {{- range .Values.frontend.ingress.hosts }}
         - {{ .host | quote }}

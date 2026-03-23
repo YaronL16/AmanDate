@@ -1,6 +1,12 @@
 1. Get frontend URL:
 {{- range .Values.frontend.ingress.hosts }}
-  http{{ if $.Values.frontend.ingress.tls }}s{{ end }}://{{ .host }}
+  http{{ if and $.Values.frontend.ingress.tls $.Values.frontend.ingress.tls.clusterIssuerName }}s{{ end }}://{{ .host }}
+{{- end }}
+
+{{- if and $.Values.frontend.ingress.tls $.Values.frontend.ingress.tls.clusterIssuerName }}
+
+  TLS enabled via cert-manager ClusterIssuer: {{ $.Values.frontend.ingress.tls.clusterIssuerName }}
+  Generated TLS Secret: {{ include "amandate.frontend.fullname" . }}-tls
 {{- end }}
 
 2. Backend service DNS:
