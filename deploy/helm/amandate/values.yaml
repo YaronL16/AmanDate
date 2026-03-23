@@ -30,7 +30,7 @@ frontend:
     # HTTPS via cert-manager. Set a ClusterIssuer name to enable TLS on this Ingress.
     # The generated certificate Secret name is "<release>-amandate-frontend-tls".
     tls:
-      clusterIssuerName: ""
+      clusterIssuerName: "letsencrypt-prod"
 # Vault Secrets
 vaultStaticSecret:
   # Requires Vault Secrets Operator + VaultAuth in the target namespace.
